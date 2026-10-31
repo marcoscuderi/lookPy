@@ -41,7 +41,10 @@ have distinct colours. Colouring is a visual aid, not a Python error checker.
 It does not change the source, calculations or experiment manifest.
 
 1. Click **Run all**. The script is saved and executed in a separate process.
-2. The channel list, three plot tabs, and execution log populate on success.
+2. The channel list and execution log populate on success; no plots open
+   automatically. Select axes and use New plot tab. Use Refresh axes to update
+   that same plot when you change its variables. `record_id` is the original
+   row-number plotting column.
 3. Zoom horizontally. Both y-axes fit the visible data independently. Uncheck
    **Fit both Y axes** to hold the current ranges. Right-click the plot for
    additional navigation controls. Matching x channels are linked between tabs;

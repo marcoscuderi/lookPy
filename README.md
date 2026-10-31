@@ -2,7 +2,9 @@
 
 Script-driven experimental reduction, inspired by Xlook's interactive workflow.
 
-**Approved baseline: 0.1.1a1 — embedded Monokai editor and contact-onset zeroing.**
+**Trial branch: 0.1.3a1 — manual plot tabs and original-row axes.**
+The approved main/tag baseline remains 0.1.1a1 until this change is accepted.
+The embedded Monokai editor and contact-onset zeroing are retained.
 The repository is named lookPy; the Python package and launch command remain
 `xlookpy`, so existing reduction scripts continue to work.
 
@@ -30,9 +32,13 @@ python tools/setup_demo.py
 python -m xlookpy gui examples/demo/reduction.py
 ```
 
-Click **Run all**. The embedded editor supports Python colouring, font-size
-controls and dark/light themes. Inspect dual-axis plots, click curves to copy
-original record IDs, and copy two-point intervals into the script.
+Click **Run all** to load/reduce; no plot tabs open automatically. Choose X,
+LEFT and optional RIGHT channels, then click **New plot tab**. Change channels
+and click **Refresh axes** to update the active plot without creating another
+tab. Use `record_id` as an axis to inspect original row number against time.
+
+The embedded editor still supports Python colouring, font-size controls and
+dark/light themes. Click curves to copy original row IDs and two-point intervals.
 
 The included raw.csv and calibration_examples are explicitly synthetic fixtures.
 They are not calibration values for the apparatus. No real TDMS experiments or
@@ -86,12 +92,14 @@ python -m pip install -e ".[gui,test]"
 python -m pytest -q
 ```
 
-GitHub Actions runs the approved 20-test suite on Linux and macOS with Qt
+GitHub Actions runs the 26-test feature suite on Linux and macOS with Qt
 offscreen. Offscreen tests do not certify native desktop behaviour or approve
 scientific reference/calibration choices. The application remains an early
 working foundation, not a complete Xlook port.
 
 ## Documentation
+
+- [Exact Mac branch-testing and rollback procedure](docs/testing/MANUAL_PLOT_TABS_MAC.md)
 
 - [Operator guide](docs/OPERATOR_GUIDE.md)
 - [Contact-zero workflow](CONTACT_ZERO_UPDATE.md)

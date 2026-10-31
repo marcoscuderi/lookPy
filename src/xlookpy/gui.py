@@ -1,4 +1,4 @@
-"""First desktop shell: script editing, isolated Run all, inspection and picking.
+"""Desktop shell: embedded script editing, explicit plot tabs and picking.
 
 No numerical reduction functions are implemented here. Run section and a
 general Python console are intentionally deferred until execution semantics
@@ -27,6 +27,8 @@ class PlotPanel(QtWidgets.QWidget):
         super().__init__()
         self.exp, self.spec = exp, spec
         self.last_picks = []
+        self.pick_markers = []
+        self._updating = False
         layout = QtWidgets.QVBoxLayout(self)
         controls = QtWidgets.QHBoxLayout()
         self.auto = QtWidgets.QCheckBox("Fit both Y axes to visible X")
@@ -55,24 +57,7 @@ class PlotPanel(QtWidgets.QWidget):
         self.primary.vb.sigResized.connect(self.sync_views)
         self.primary.vb.sigXRangeChanged.connect(self.rescale)
         self.curves = []
-        x = exp[spec["x"]].values
-        monotonic = np.isfinite(x).all() and bool(np.all(np.diff(x) >= 0))
-        for axis, channel, color in [(self.primary.vb, spec["left"], "#20658c"),
-                                      (self.secondary, spec.get("right"), "#be632f")]:
-            if channel is None:
-                continue
-            y = exp[channel].values
-            curve = pg.PlotDataItem(x, y, pen=pg.mkPen(color, width=1), connect="finite")
-            # Parent first: enabling clipToView while scene ownership changes can
-            # make pyqtgraph temporarily resolve a PlotWidget as the ViewBox.
-            axis.addItem(curve)
-            if monotonic:
-                curve.setDownsampling(auto=True, method="peak")
-                curve.setClipToView(True)
-            self.curves.append((axis, channel, x, y))
-        self.primary.showAxis("right", spec.get("right") is not None)
-        if spec.get("right"):
-            self.primary.setLabel("right", self.label(spec["right"]))
+        self.plot_items = []
         self.crosshair = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen("#9babb4", style=QtCore.Qt.PenStyle.DashLine))
         self.primary.addItem(self.crosshair, ignoreBounds=True)
         self.plot.scene().sigMouseClicked.connect(self.click)
@@ -80,9 +65,59 @@ class PlotPanel(QtWidgets.QWidget):
         self.auto.toggled.connect(lambda _: self.rescale())
         reset.clicked.connect(self.reset)
         self.sync_views()
-        self.reset()
+        self.update_plot(exp, spec, preserve_x=False)
+
+    def update_plot(self, exp, spec, *, preserve_x=True):
+        """Replace axes/data in this widget, retaining X zoom for an unchanged X.
+
+        Full-resolution arrays remain the source for bounds and picking. Remove
+        the old curves and picked markers so stale coordinates cannot be reused.
+        """
+        spec = {"right": None, **spec}
+        for name in (spec["x"], spec["left"], spec["right"]):
+            if name is not None:
+                exp[name]
+        keep_range = self.primary.vb.viewRange()[0] if preserve_x and self.curves and self.spec["x"] == spec["x"] else None
+        self._updating = True
+        self.primary.vb.setXLink(None)
+        for axis, item in self.plot_items:
+            axis.removeItem(item)
+        self.plot_items.clear()
+        for marker in self.pick_markers:
+            self.primary.removeItem(marker)
+        self.pick_markers.clear()
+        self.last_picks.clear()
+        self.curves.clear()
+        self.exp, self.spec = exp, dict(spec)
+        self.primary.setLabel("bottom", self.label(spec["x"]))
+        self.primary.setLabel("left", self.label(spec["left"]))
+        self.primary.setLabel("right", self.label(spec["right"]) if spec["right"] else "")
+        self.primary.showAxis("right", spec["right"] is not None)
+        x = exp[spec["x"]].values
+        monotonic = np.isfinite(x).all() and bool(np.all(np.diff(x) >= 0))
+        for axis, channel, color in [(self.primary.vb, spec["left"], "#20658c"),
+                                      (self.secondary, spec["right"], "#be632f")]:
+            if channel is None:
+                continue
+            y = exp[channel].values
+            curve = pg.PlotDataItem(x, y, pen=pg.mkPen(color, width=1), connect="finite")
+            axis.addItem(curve)  # Parent before enabling clipToView.
+            self.plot_items.append((axis, curve))
+            if monotonic:
+                curve.setDownsampling(auto=True, method="peak")
+                curve.setClipToView(True)
+            self.curves.append((axis, channel, x, y))
+        self._updating = False
+        self.status.setText("Click near a curve to print its exact original row and coordinates. Changing plotted axes clears previous picks.")
+        if keep_range is None:
+            self.reset()
+        else:
+            self.primary.vb.setXRange(*keep_range, padding=0)
+            self.rescale()
 
     def label(self, name):
+        if name == "record_id":
+            return "Original row number (record_id)"
         return f"{name} [{self.exp[name].unit}]"
 
     def sync_views(self):
@@ -97,7 +132,7 @@ class PlotPanel(QtWidgets.QWidget):
         self.rescale()
 
     def rescale(self, *args):
-        if not self.auto.isChecked():
+        if self._updating or not self.auto.isChecked():
             return
         lo, hi = self.primary.vb.viewRange()[0]
         for axis, name, x, y in self.curves:
@@ -147,12 +182,16 @@ class PlotPanel(QtWidgets.QWidget):
         record = int(self.exp.record_ids[i])
         self.last_picks = (self.last_picks+[record])[-2:]
         xname = self.spec["x"]
-        text = f"record_id={record}; {xname}={self.exp[xname].values[i]:.17g} {self.exp[xname].unit}; {channel}={self.exp[channel].values[i]:.17g} {self.exp[channel].unit}"
+        xu = "row" if xname == "record_id" else self.exp[xname].unit
+        yu = "row" if channel == "record_id" else self.exp[channel].unit
+        text = f"record_id={record}; {xname}={self.exp[xname].values[i]:.17g} {xu}; {channel}={self.exp[channel].values[i]:.17g} {yu}"
         self.status.setText(text)
         QtWidgets.QApplication.clipboard().setText(str(record))
         self.picked.emit(text+"\nCopied record ID to clipboard.")
-        self.primary.addItem(pg.InfiniteLine(pos=self.exp[xname].values[i], angle=90,
-                             pen=pg.mkPen("#6d8056", style=QtCore.Qt.PenStyle.DotLine)), ignoreBounds=True)
+        marker = pg.InfiniteLine(pos=self.exp[xname].values[i], angle=90,
+                                pen=pg.mkPen("#6d8056", style=QtCore.Qt.PenStyle.DotLine))
+        self.primary.addItem(marker, ignoreBounds=True)
+        self.pick_markers.append(marker)
 
     def copy_interval(self):
         if len(self.last_picks) < 2:
@@ -178,7 +217,15 @@ class MainWindow(QtWidgets.QMainWindow):
         self.tabs = QtWidgets.QTabWidget()
         self.tabs.setTabsClosable(True)
         self.tabs.tabCloseRequested.connect(self.close_tab)
-        self.setCentralWidget(self.tabs)
+        self.plot_area = QtWidgets.QStackedWidget()
+        self.no_plots = QtWidgets.QLabel("No plots open.\n\nRun the reduction, choose X / LEFT / RIGHT channels,\nthen click New plot tab.\n\nRefresh axes updates only the active plot.")
+        self.no_plots.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        self.no_plots.setWordWrap(True)
+        self.no_plots.setStyleSheet("color: #526B7A; font-size: 14pt;")
+        self.plot_area.addWidget(self.no_plots)
+        self.plot_area.addWidget(self.tabs)
+        self.setCentralWidget(self.plot_area)
+        self._plot_count = 0
         self.editor = CodeEditor()
         self.editor.sourceChanged.connect(self.edited)
         self.log = QtWidgets.QPlainTextEdit()
@@ -187,6 +234,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.info.setReadOnly(True)
         self.channels = QtWidgets.QTableWidget(0, 3)
         self.channels.setHorizontalHeaderLabels(["Channel", "Unit", "Invalid"])
+        self.channels.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
         self.channels.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
         self.channels.itemSelectionChanged.connect(self.channel_info)
         left = QtWidgets.QWidget()
@@ -198,9 +246,18 @@ class MainWindow(QtWidgets.QMainWindow):
             combo = QtWidgets.QComboBox()
             self.selectors[key] = combo
             left_layout.addWidget(combo)
-        plot = QtWidgets.QPushButton("Plot selected channels")
-        plot.clicked.connect(self.custom_plot)
-        left_layout.addWidget(plot)
+        self.refresh_button = QtWidgets.QPushButton("Refresh axes")
+        self.refresh_button.setObjectName("refreshAxes")
+        self.refresh_button.setToolTip("Apply these channels to the active plot. No new tab is created.")
+        self.refresh_button.clicked.connect(self.refresh_plot)
+        self.new_plot_button = QtWidgets.QPushButton("New plot tab")
+        self.new_plot_button.setObjectName("newPlotTab")
+        self.new_plot_button.setToolTip("Create an additional plot using the selected channels.")
+        self.new_plot_button.clicked.connect(self.new_plot)
+        left_layout.addWidget(self.refresh_button)
+        left_layout.addWidget(self.new_plot_button)
+        self.tabs.currentChanged.connect(self.sync_axis_selectors)
+        self.update_plot_controls()
         left_layout.addWidget(self.info)
         left_dock = self.add_dock("Experiment and channels", left, QtCore.Qt.DockWidgetArea.LeftDockWidgetArea)
         right_dock = self.add_dock("Reduction script", editor_panel(self.editor), QtCore.Qt.DockWidgetArea.RightDockWidgetArea)
@@ -232,6 +289,8 @@ class MainWindow(QtWidgets.QMainWindow):
         widget = self.tabs.widget(index)
         self.tabs.removeTab(index)
         widget.deleteLater()
+        self.link_plots()
+        self.update_plot_controls()
 
     def clear_tabs(self):
         while self.tabs.count():
@@ -254,7 +313,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self.editor.setPlainText(self.script.read_text(encoding="utf-8"))
         self.clear_tabs()
         self.exp = None
+        self.manifest = None
+        self._plot_count = 0
         self.channels.setRowCount(0)
+        self.info.clear()
+        for combo in self.selectors.values():
+            combo.clear()
+        self.update_plot_controls()
         self.setWindowTitle(f"Xlook Python — {self.script}")
         manifest = self.script.parent/"experiment.json"
         if manifest.exists():
@@ -312,28 +377,51 @@ class MainWindow(QtWidgets.QMainWindow):
             path = self.script.parent/manifest["outputs"]["state"]
             if file_digest(path) != manifest["outputs"]["state_sha256"]:
                 raise ValueError("Cached experiment fingerprint mismatch. Run the reduction again.")
+            selected = {key: combo.currentText() for key, combo in self.selectors.items()}
             self.exp = read_state(path, manifest)
             self.manifest = manifest
-            self.channels.setRowCount(len(self.exp.channels))
-            for i, name in enumerate(self.exp.channels):
+            self.channels.setRowCount(len(self.exp.plot_columns))
+            for i, name in enumerate(self.exp.plot_columns):
                 c = self.exp[name]
-                for j, value in enumerate((name, c.unit, str((~c.valid).sum()))):
-                    self.channels.setItem(i, j, QtWidgets.QTableWidgetItem(value))
+                unit = "row" if name == "record_id" else c.unit
+                for j, value in enumerate((name, unit, str((~c.valid).sum()))):
+                    item = QtWidgets.QTableWidgetItem(value)
+                    if name == "record_id":
+                        item.setToolTip("Original zero-based row number. Select it on an axis and compare with time to inspect sampling-rate changes.")
+                    self.channels.setItem(i, j, item)
             for key, combo in self.selectors.items():
                 combo.clear()
                 if key == "right":
                     combo.addItem("(none)")
-                combo.addItems(self.exp.channels)
-            if "time" in self.exp.channels:
-                self.selectors["x"].setCurrentText("time")
-            self.clear_tabs()
-            for spec in manifest["plots"]:
-                self.add_plot(spec)
+                combo.addItems(self.exp.plot_columns)
+            default_x = "time" if "time" in self.exp.channels else "record_id"
+            default_left = "shear_stress" if "shear_stress" in self.exp.channels else next(n for n in self.exp.plot_columns if n != default_x)
+            defaults = {"x": default_x, "left": default_left, "right": "(none)"}
+            for key, combo in self.selectors.items():
+                choice = selected[key] if combo.findText(selected[key]) >= 0 else defaults[key]
+                combo.setCurrentText(choice)
+            # Script plot requests remain in the manifest for compatibility.
+            # Only user-created tabs are displayed, including after a rerun.
+            self.tabs.blockSignals(True)
+            try:
+                for index in range(self.tabs.count()-1, -1, -1):
+                    panel = self.tabs.widget(index)
+                    missing = [n for n in (panel.spec["x"], panel.spec["left"], panel.spec.get("right")) if n and n not in self.exp.plot_columns]
+                    if missing:
+                        self.log.appendPlainText(f"Closed {panel.spec['title']}: channels unavailable in the new result: {', '.join(missing)}")
+                        self.close_tab(index)
+                    else:
+                        panel.update_plot(self.exp, panel.spec)
+            finally:
+                self.tabs.blockSignals(False)
+            self.link_plots()
+            self.sync_axis_selectors()
+            self.update_plot_controls()
             self.info.setPlainText(f"Records: {len(self.exp):,}\nOriginal IDs: {self.exp.record_ids[0]}–{self.exp.record_ids[-1]}\nRun: {manifest['run_id']}\nCalibrations: {len(manifest['calibrations'])}\nRegistry: {self.registry.root}")
             current = self.editor.toPlainText().encode()
             import hashlib
             stale = hashlib.sha256(current).hexdigest() != manifest["script"]["sha256"]
-            self.statusBar().showMessage("Script differs from displayed results — Run all to update." if stale else "Successful reduction loaded. Click curves to pick original record IDs.")
+            self.statusBar().showMessage("Script differs from displayed results — Run all to update." if stale else "Reduction loaded. Choose channels and click New plot tab; Refresh axes updates the active tab.")
         except Exception as exc:
             self.log.appendPlainText(f"Cannot display result: {exc}")
 
@@ -341,10 +429,15 @@ class MainWindow(QtWidgets.QMainWindow):
         panel = PlotPanel(self.exp, spec)
         panel.picked.connect(self.log.appendPlainText)
         self.tabs.addTab(panel, spec["title"])
+        self.tabs.setCurrentWidget(panel)
+        self.update_plot_controls()
         self.link_plots()
+        return panel
 
     def link_plots(self, *args):
         first = {}
+        for i in range(self.tabs.count()):
+            self.tabs.widget(i).primary.vb.setXLink(None)
         for i in range(self.tabs.count()):
             panel = self.tabs.widget(i)
             key = panel.spec["x"]
@@ -353,17 +446,42 @@ class MainWindow(QtWidgets.QMainWindow):
             if key not in first:
                 first[key] = panel.primary.vb
 
-    def custom_plot(self):
-        if self.exp is not None:
-            right = self.selectors["right"].currentText()
-            self.add_plot({"x": self.selectors["x"].currentText(), "left": self.selectors["left"].currentText(),
-                           "right": None if right == "(none)" else right, "title": "Custom plot"})
+    def selected_plot_spec(self, title):
+        right = self.selectors["right"].currentText()
+        return {"x": self.selectors["x"].currentText(), "left": self.selectors["left"].currentText(),
+                "right": None if right == "(none)" else right, "title": title}
+
+    def new_plot(self):
+        if self.exp is None:
+            return
+        self._plot_count += 1
+        self.add_plot(self.selected_plot_spec(f"Plot {self._plot_count}"))
+
+    def refresh_plot(self):
+        panel = self.tabs.currentWidget()
+        if self.exp is None or panel is None:
+            return
+        panel.update_plot(self.exp, self.selected_plot_spec(panel.spec["title"]))
+        self.link_plots()
+        self.statusBar().showMessage(f"Refreshed {panel.spec['title']} in place. No new tab created.")
+
+    def sync_axis_selectors(self, *args):
+        panel = self.tabs.currentWidget()
+        if panel is not None:
+            for key in ("x", "left", "right"):
+                self.selectors[key].setCurrentText(panel.spec.get(key) or "(none)")
+        self.update_plot_controls()
+
+    def update_plot_controls(self):
+        self.new_plot_button.setEnabled(self.exp is not None)
+        self.refresh_button.setEnabled(self.exp is not None and self.tabs.count() > 0)
+        self.plot_area.setCurrentWidget(self.tabs if self.tabs.count() else self.no_plots)
 
     def channel_info(self):
         rows = self.channels.selectionModel().selectedRows()
         row = rows[0].row() if rows else self.channels.currentRow()
-        if self.exp is not None and 0 <= row < len(self.exp.channels):
-            name = self.exp.channels[row]
+        if self.exp is not None and 0 <= row < len(self.exp.plot_columns):
+            name = self.exp.plot_columns[row]
             self.info.setPlainText(json.dumps({"channel": name, "unit": self.exp[name].unit,
                                               "metadata": self.exp[name].metadata}, indent=2))
 

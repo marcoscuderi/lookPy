@@ -48,7 +48,8 @@ experiment folder. Keep your old script as a backup and carry over your actual
 RAW_FILE, geometry, calibration choices and analysis parameters.
 
 1. Leave both contact settings as `None` and Run all.
-2. The original physical load/displacement plots appear. This is inspection
+2. Original physical signals are available. On the manual-plotting branch, select
+   X=time and the vertical/horizontal load channels, then click New plot tab. This is inspection
    only; stress, friction and velocity have not yet been computed. The log and
    manifest explicitly identify this mode. Its data export contains inspection
    signals, not reduced stresses.

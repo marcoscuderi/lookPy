@@ -1,11 +1,11 @@
-# Validation of version 0.1.1a1
+# Validation of version 0.1.3a1 (trial branch)
 
 Validation performed in Linux with Python 3.12. Automated desktop checks use
 Qt's offscreen platform. A native macOS window has not been exercised here.
 
 ## Automated checks
 
-**20 tests passed** after the contact-zero update, including:
+**26 tests passed locally** after the manual-plotting update, including:
 
 - Recovering prescribed slip from a nonlinear elastic displacement model on
   loading and unloading, including an opposite coordinate and N/kN conversion.
@@ -21,8 +21,8 @@ Qt's offscreen platform. A native macOS window has not been exercised here.
 - Retaining the previous manifest when a subsequent script fails.
 - Full-resolution picking on either y-axis, independent visible-range scaling,
   and copying an inclusive interval expression.
-- A real desktop worker process running the complete demo and loading three
-  plot tabs.
+- A real desktop worker process running the complete demo without opening
+  automatic tabs; explicit New plot tab creates the requested plot.
 - Python token colouring, comments/strings, complete and unfinished multiline
   strings, and non-BMP Unicode positioning.
 - Display-only formatting that preserves source text and modified state.
@@ -36,6 +36,11 @@ Qt's offscreen platform. A native macOS window has not been exercised here.
 
 The test suite is included in `tests/`. It tests scientific invariants and
 execution behaviour, rather than treating GUI appearance as numerical proof.
+
+Additional plotting checks cover in-place refresh, retained X zoom, original
+row/time plotting after slicing, linked axes after X changes, reruns that update
+only user tabs, disabled controls before reduction, and record_id export without
+duplicate columns. Native Mac interaction still needs the operator test.
 
 ## Actual laboratory input
 

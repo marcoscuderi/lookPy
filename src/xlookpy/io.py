@@ -65,6 +65,8 @@ def write_dat(exp, path, channels):
     selected = list(channels or exp.channels)
     if not selected or len(selected) != len(set(selected)):
         raise ValueError("Export requires one or more unique channel names.")
+    # Original row IDs are always the first column, including when explicitly selected.
+    selected = [name for name in selected if name != "record_id"]
     for name in selected:
         exp[name]
     with Path(path).open("w", encoding="utf-8", newline="") as stream:

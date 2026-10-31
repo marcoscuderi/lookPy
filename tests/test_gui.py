@@ -60,7 +60,10 @@ def test_desktop_runs_real_worker_and_loads_result(app, tmp_path):
     loop.exec()
     assert window.process is None, window.log.toPlainText()
     assert window.exp is not None, window.log.toPlainText()
-    assert window.tabs.count() == 3
+    assert window.tabs.count() == 0
+    assert len(window.manifest["plots"]) == 3  # Existing script requests stay compatible.
+    window.new_plot_button.click()
+    assert window.tabs.count() == 1
     assert len(window.exp) > 20000
     assert (project/"experiment.json").is_file()
     window.editor.appendPlainText("\n# edit")
