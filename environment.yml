@@ -1,0 +1,7 @@
+name: xlook
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - pip
+# After creation: conda activate xlook; python -m pip install -e ".[gui,test]"

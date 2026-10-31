@@ -1,0 +1,26 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+build/
+dist/
+.DS_Store
+.idea/
+.vscode/
+.env
+.env.*
+*.pem
+*.key
+# Real experiments and generated outputs belong outside the application checkout.
+*.tdms
+*.tdms_index
+*.dat
+*.npz
+results/
+experiments/
+local_calibrations/
+experiment.json

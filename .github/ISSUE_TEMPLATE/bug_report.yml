@@ -1,0 +1,27 @@
+name: Bug report
+description: Report a reproducible problem in lookPy
+title: "[Bug] "
+body:
+  - type: textarea
+    id: behaviour
+    attributes:
+      label: Expected and actual behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Prefer a synthetic example. Do not upload private experiments or credentials.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Version, operating system and Python/Conda environment
+      description: Include the release tag or git commit if available.
+  - type: textarea
+    id: error
+    attributes:
+      label: Error message or traceback
+      render: text

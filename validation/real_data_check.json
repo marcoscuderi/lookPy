@@ -1,0 +1,35 @@
+{
+  "raw_name": "eq_phys_demo.tdms",
+  "raw_sha256": "db59970356336cdfe3214cc09a86ed0013df929bcce6a5d16d1a28b289826a4f",
+  "records": 728939,
+  "channels": 20,
+  "finite_friction": 691487,
+  "finite_velocity": 727443,
+  "apparatus_correction": null,
+  "reference_records": [
+    0,
+    0
+  ],
+  "unit_basis": "operator convention kN, um, s; explicit custom TDMS conversion",
+  "velocity_window_s": 0.5,
+  "direct_regression_check_records": [
+    10000,
+    100000,
+    400000,
+    700000
+  ],
+  "maximum_absolute_slope_difference_mm_per_s": 8.997882300354476e-12,
+  "checks": [
+    "source record count",
+    "time monotonicity",
+    "explicit acquisition conversion exactly once",
+    "independent stress equations",
+    "running slope vs direct regression",
+    "desktop loaded full experiment"
+  ],
+  "limitations": [
+    "Zero references are inspection placeholders, not scientifically approved selections.",
+    "No apparatus correction enabled.",
+    "No C Xlook numerical equivalence claim."
+  ]
+}

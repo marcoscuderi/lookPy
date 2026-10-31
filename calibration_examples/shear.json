@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "id": "demo/shear/2026-10-r1",
+  "category": "sensor",
+  "apparatus": "SYNTHETIC teaching apparatus",
+  "sensor": "shear",
+  "date": "2026-10-01",
+  "input_unit": "V",
+  "output_unit": "kN",
+  "model": "linear",
+  "parameters": {
+    "slope": 10.0,
+    "intercept": 0.0
+  },
+  "valid_range": [
+    -10.0,
+    10.0
+  ],
+  "notes": "SYNTHETIC EXAMPLE ONLY. Do not use these values for laboratory data."
+}

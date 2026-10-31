@@ -1,0 +1,21 @@
+name: Feature request
+description: Describe an operator workflow or scientific capability
+title: "[Feature] "
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: What should the operator be able to do?
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: What would demonstrate that it works?
+      description: Include equations, units, example inputs or expected plots where relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Choices that must remain under operator control
