@@ -40,7 +40,10 @@ class Channel:
 
 class Experiment:
     def __init__(self, channels, *, metadata=None, record_ids=None, session=None):
+        if "record_id" in channels:
+            raise ValueError("record_id is reserved for original row numbers, not a measured channel.")
         self._channels = dict(channels)
+        self._record_channel = None
         lengths = {len(c.values) for c in channels.values()}
         if len(lengths) != 1 or not channels or next(iter(lengths)) < 1:
             raise ValueError("At least one nonempty channel is needed; all channels must have equal lengths.")
@@ -61,11 +64,22 @@ class Experiment:
     def channels(self):
         return tuple(self._channels)
 
+    @property
+    def plot_columns(self):
+        """Measured/derived channels plus the virtual original-row coordinate."""
+        return ("record_id", *self.channels)
+
     def __getitem__(self, name):
+        if name == "record_id":
+            if self._record_channel is None:
+                self._record_channel = Channel(self.record_ids, "dimensionless", {
+                    "role": "record_id", "basis": "original_zero_based_row_number",
+                    "note": "Original record IDs; retained after slicing. Plot against time to inspect acquisition-rate changes."})
+            return self._record_channel
         try:
             return self._channels[name]
         except KeyError:
-            raise KeyError(f"Unknown channel {name!r}. Available: {', '.join(self.channels)}") from None
+            raise KeyError(f"Unknown channel {name!r}. Available: {', '.join(self.plot_columns)}") from None
 
     def records(self, start, end):
         r = Records(start, end)
@@ -307,12 +321,13 @@ class Experiment:
                          "algorithm": "centred local linear regression; equal sample weights; full-width support; no gap bridging"})
 
     def plot(self, *, x="time", left, right=None, title=None):
+        """Record a plot specification in the manifest; GUI tabs open explicitly."""
         for name in (x, left, right):
             if name is not None:
                 self[name]
         spec = {"x": x, "left": left, "right": right, "title": title or left}
         if self._session is None:
-            raise RuntimeError("Use a Session to record plots and open them in the desktop app.")
+            raise RuntimeError("Use a Session to record plot specifications.")
         self._session.plots.append(spec)
         return spec
 

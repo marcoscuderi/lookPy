@@ -50,7 +50,8 @@ def reduce(session):
     exp.derivative("slip", time="time", window_s=velocity_window_s,
                    min_points=5, max_gap_s=0.05, output="slip_velocity")
 
-    # %% 6. Plot requests become tabs in the desktop workspace.
+    # %% 6. Optional plot specifications saved in the manifest.
+    # Open GUI tabs explicitly with New plot tab; use Refresh axes to update.
     exp.plot(x="time", left="shear_stress", right="normal_stress", title="Stresses")
     exp.plot(x="time", left="measured_relative", right="slip", title="Displacement correction")
     exp.plot(x="time", left="friction", right="slip_velocity", title="Friction and velocity")

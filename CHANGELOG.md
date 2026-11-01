@@ -2,8 +2,17 @@
 
 ## Unreleased
 
-Future changes will be developed on branches, reviewed in pull requests, and
-accepted after operator testing. Numerical and GUI baseline remains 0.1.1a1.
+## 0.1.3a1 — manual plotting (under operator review)
+
+- No automatic plot tabs on loading/reducing, including legacy script plot requests.
+- Original row number `record_id` is selectable for plotting and remains stable after slicing.
+- Refresh axes replaces the active plot in place; New plot tab is the explicit way to add a plot.
+- Unchanged X retains zoom; changing X resets its range and updates axis links.
+- Reruns update existing user tabs without opening additional plots.
+- Embedded editor, contact-zero calculations and calibration workflow retained.
+- Detailed Mac test procedure included; 26 automated tests.
+
+Main and the baseline tag stay unchanged until operator acceptance.
 
 ## 0.1.1a1 — approved baseline
 

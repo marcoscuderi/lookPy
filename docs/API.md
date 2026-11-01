@@ -22,7 +22,13 @@ asynchronous channels and Xlook binary inputs require additional adapters.
 
 ## Channel and selection methods
 
-`exp.channels` lists names; `exp["force"].values` is a read-only NumPy array;
+`exp.channels` lists measured/derived names (unchanged by plotting);
+`exp.plot_columns` additionally includes virtual `record_id`, the original
+zero-based row coordinate. It is accessible as `exp["record_id"]` and retains
+original IDs after slicing. DAT exports already contain this first column;
+explicit selection will not duplicate it.
+
+`exp["force"].values` is a read-only NumPy array;
 `.unit`, `.valid` and `.metadata` expose the channel's unit, finite-value mask
 and provenance. The first version represents invalid samples with NaN plus
 operation metadata/reasons, rather than a separate general quality-flag system.
@@ -48,7 +54,7 @@ are recommended for teaching.
 | `friction(shear, normal, output="friction", min_normal_MPa=0.01, records=None)` | Stress ratio only where finite, inside selection, and normal stress strictly exceeds threshold |
 | `correct_displacement(source, force=..., using=cal, reference_record=..., sign=-1, outside="error", records=None, output=...)` | Reference-relative correction from e(F); see calibration guide |
 | `derivative(source, time="time", window_s=..., min_points=5, max_gap_s=None, records=None, output=...)` | Local linear-regression derivative, output source-unit/s |
-| `plot(x="time", left=..., right=None, title=...)` | Request a desktop plot; calculations do not depend on drawing |
+| `plot(x="time", left=..., right=None, title=...)` | Record a plot specification in the manifest; GUI tabs are opened explicitly |
 
 For your geometry use **2500 mm²** and **surfaces=2 for shear stress**. Normal
 stress uses **surfaces=1**. A force or displacement zero is always your decision.
@@ -112,3 +118,12 @@ their state-cache fingerprint when opened in the desktop.
 In this release `# %%` markers organize the script for readers only: **Run
 section is not implemented**. A general dependency graph, checkpoint reuse,
 undo, multi-experiment sessions, and automatic script insertion are deferred.
+
+## Manual plot controls
+
+The desktop does not open exp.plot() specifications automatically. Existing
+scripts remain valid and their requests stay in the manifest. Select axes and
+use New plot tab to create a panel, or Refresh axes to replace the active
+panel. Dropdown changes alone do not redraw. Existing user-created tabs refresh
+on a rerun; opening another project starts with no tabs. These display choices
+do not alter reduced arrays or scientific parameters.
