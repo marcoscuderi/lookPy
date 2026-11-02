@@ -31,25 +31,32 @@ class KernelController(QtCore.QObject):
         self.manager = QtKernelManager(kernel_name="python3", autorestart=False, **transport)
         # Never accidentally use a globally installed kernel from another Conda env.
         self.manager.kernel_spec.argv = [sys.executable, "-m", "ipykernel_launcher", "-f", "{connection_file}"]
-        self.manager.start_kernel(cwd=str(self.script.parent))
-        self.client = self.manager.client()
-        self.client.iopub_channel.message_received.connect(self.iopub)
-        self.client.shell_channel.message_received.connect(self.reply)
-        self.client.start_channels()
-        console.kernel_manager = self.manager
-        console.kernel_client = self.client
+        self.client = None
         self.ready = False
         self.busy = False
         self._pending = set()
         self._closed = False
-        code = ("from xlookpy.kernel_runtime import KernelRuntime as __px_Runtime\n"
-                f"__px_runtime = __px_Runtime({str(self.script)!r}, {str(registry)!r}, {self.temp.name!r}, get_ipython())\n"
-                "__px_runtime.report(initial=True)")
-        self.initial = self.send(code)
         self.monitor = QtCore.QTimer(self)
         self.monitor.setInterval(1000)
         self.monitor.timeout.connect(self.check_process)
-        self.monitor.start()
+        try:
+            self.manager.start_kernel(cwd=str(self.script.parent))
+            self.client = self.manager.client()
+            # ThreadedKernelClient creates its IOLoop in start_channels. Accessing
+            # a channel before that is an assertion failure in jupyter_client 8.
+            self.client.start_channels()
+            self.client.iopub_channel.message_received.connect(self.iopub)
+            self.client.shell_channel.message_received.connect(self.reply)
+            console.kernel_manager = self.manager
+            console.kernel_client = self.client
+            code = ("from xlookpy.kernel_runtime import KernelRuntime as __px_Runtime\n"
+                    f"__px_runtime = __px_Runtime({str(self.script)!r}, {str(registry)!r}, {self.temp.name!r}, get_ipython())\n"
+                    "__px_runtime.report(initial=True)")
+            self.initial = self.send(code)
+            self.monitor.start()
+        except BaseException:
+            self.close()
+            raise
 
     def check_process(self):
         process = getattr(self.manager.provisioner, "process", None)
@@ -112,7 +119,8 @@ class KernelController(QtCore.QObject):
             return
         self._closed = True
         self.monitor.stop()
-        self.client.stop_channels()
+        if self.client is not None:
+            self.client.stop_channels()
         self.console.kernel_client = None
         self.console.kernel_manager = None
         try:
