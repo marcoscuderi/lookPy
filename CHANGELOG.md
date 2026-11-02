@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.0a1 — cell workspace test version
+
+- Add top-level # %% scripts, run cell/run to here, prefix replay, execution states
+  and an embedded QtConsole sharing an isolated IPython namespace.
+- Add load/calibration/save/stop helpers and explicit BRAVA acquisition profile.
+- Add non-destructive conversion of existing reduce(session) scripts.
+- Keep console trials separate from fresh-run published manifests; invalidate
+  derived descendants when console operations replace a derived channel.
+- Retain legacy batch execution and accepted plotting behaviour.
+
 ## 0.2.0a1 — rawPy workflow test version
 
 - Add offset repair, constant shifts/stiffness correction, layer thickness, strain,

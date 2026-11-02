@@ -106,8 +106,13 @@ class Experiment(AnalysisOperations):
     def _put(self, output, values, unit, operation):
         if not isinstance(output, str) or not output or output == "record_id" or any(c in output for c in "\t\r\n"):
             raise ValueError("Choose a nonempty output channel name without tabs/newlines (record_id is reserved).")
-        if output in self._channels:
-            raise ValueError(f"Channel {output!r} already exists. Choose a new output name or run the script from the beginning.")
+        replacing = output in self._channels
+        if replacing:
+            allowed = self._session is not None and getattr(self._session, "_allow_replace", False)
+            if not allowed or self[output].metadata.get("role") != "derived":
+                raise ValueError(f"Channel {output!r} already exists. Choose a new output name or rerun its cell.")
+            if output in [operation.get(k) for k in ("input", "force", "shear", "normal", "thickness", "x", "time")]:
+                raise ValueError("Use a different output name from the input to avoid accumulating corrections.")
         factor(unit, unit)
         parent_names = [operation[k] for k in ("input", "force", "shear", "normal") if k in operation]
         calibrated = operation["operation"] in ("calibrate", "convert_acquisition") or any(
@@ -115,6 +120,22 @@ class Experiment(AnalysisOperations):
         c = Channel(values, unit, {"role": "derived", "sensor_calibrated": calibrated, **deepcopy(operation)})
         if len(c.values) != len(self):
             raise ValueError("Operation output length differs from experiment length.")
+        if replacing:
+            removed = {output}
+            # Invalidate derived descendants, including fit/thickness/time inputs.
+            while True:
+                children = {name for name, channel in self._channels.items()
+                            if channel.metadata.get("role") == "derived" and any(
+                                channel.metadata.get(k) in removed for k in
+                                ("input", "force", "shear", "normal", "thickness", "x", "time"))}
+                updated = removed | children
+                if updated == removed:
+                    break
+                removed = updated
+            for name in removed:
+                del self._channels[name]
+            self.history = [op for op in self.history if op.get("output") not in removed]
+            operation = {**operation, "interactive_replaced_channels": sorted(removed)}
         self._channels[output] = c
         self.history.append({**deepcopy(operation), "output": output, "unit": unit,
                              "finite_samples": int(c.valid.sum()), "invalid_samples": int((~c.valid).sum())})

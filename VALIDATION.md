@@ -1,4 +1,21 @@
-# Validation of version 0.2.0a1 (rawPy workflow trial)
+# Validation of version 0.3.0a1 (cell workspace trial)
+
+Local Linux checks: **53 passed, 3 skipped**. This execution sandbox forbids local
+socket binding, so the three full IPython-process GUI tests must run in GitHub CI
+on Linux and macOS. Those tests explicitly fail rather than skip if CI lacks
+socket support. Local tests exercise the real IPython shell hooks in-process,
+cell namespace/replay, derived-channel replacement and invalidation, failed-cell
+recovery, publication, conversion parity with both existing demo and actual-data
+templates, BRAVA profile mapping/provenance and all accepted numerical/GUI tests.
+The live cross-platform process-test result is recorded on the PR.
+
+The new GUI tests exercise a real separate kernel, shared cells/console state,
+plotting, command insertion, fresh publication, failure retention, conversion,
+interrupt and shutdown. Native Mac mouse/keyboard interaction with the user's
+real experiment remains operator validation. No new demonstration experiment
+or real experimental data were added.
+
+## Historical validation: 0.2.0a1
 
 **42 tests passed locally** with Python 3.12 and offscreen Qt on Linux.
 The suite retains all 26 accepted checks and adds scientific regression tests for
@@ -97,6 +114,5 @@ definitions. Exact numerical compatibility with historical Xlook reduction
 recipes is a subsequent validation stage against the compiled C outputs.
 
 Mechanical-stage stitching, hysteresis,
-automatic calibration fitting, publication figure export, section execution,
-the command console and stick-slip catalogues are deferred. Rate-and-state
+automatic calibration fitting, publication figure export and stick-slip catalogues are deferred. Rate-and-state
 forward and inverse modelling are outside the current scope.

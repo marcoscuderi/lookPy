@@ -133,3 +133,8 @@ do not alter reduced arrays or scientific parameters.
 See [the complete function reference](RAWPY_FUNCTIONS.md) for all public reduction
 operations, legacy reader mappings, units, examples and scientific conventions.
 The full working example is `examples/rawpy_mock/reduction.py`.
+
+## Top-level cell scripts
+
+See [Cell workspace](CELL_WORKSPACE.md) for the smaller load/calibration/save/stop
+vocabulary, cell execution and IPython trials. Legacy reduce(session) remains supported.

@@ -119,3 +119,9 @@ Start with the [Mac test procedure](docs/testing/RAWPY_ANALYSIS_MAC.md),
 [complete function reference](docs/RAWPY_FUNCTIONS.md), and
 [worked reduction](examples/rawpy_mock/reduction.py).
 All mock constants are synthetic; no real experiment data are included.
+
+## Interactive cell workspace (0.3.0a1 test branch)
+
+Use your real experiment with [cell execution and IPython](docs/CELL_WORKSPACE.md).
+The [Mac procedure](docs/testing/CELL_WORKSPACE_MAC.md) covers updating, converting
+a working copy of your current script, testing and returning to main.
