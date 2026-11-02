@@ -56,6 +56,7 @@ def test_real_kernel_cells_console_invalidation_and_fresh_publication(app, tmp_p
     try:
         window.select_cell(2)
         window.run_to_here()
+        assert window.kernel is not None, window.log.toPlainText()
         wait_until(app, lambda: window.exp is not None and "v" in window.exp.channels)
         wait_until(app, lambda: not window.kernel.busy)
         assert window.kernel.ready
@@ -82,6 +83,7 @@ def test_real_kernel_cells_console_invalidation_and_fresh_publication(app, tmp_p
         window.editor.setPlainText(source)  # Reject this trial for the next fresh run.
 
         window.run_all()
+        assert window.kernel is not None, window.log.toPlainText()
         wait_until(app, lambda: (tmp_path/"experiment.json").exists())
         wait_until(app, lambda: "Validated:" in window.workspace_status.text())
         wait_until(app, lambda: not window.kernel.busy)
@@ -115,6 +117,7 @@ def test_legacy_conversion_creates_new_real_working_script_without_overwrite(app
         assert 'def reduce' not in window.editor.toPlainText()
         assert 'load(RAW_FILE' in window.editor.toPlainText()
         window.run_all()
+        assert window.kernel is not None, window.log.toPlainText()
         wait_until(app, lambda: window.manifest is not None)
         assert len(window.exp) == 5
         assert window.manifest["script"]["path"] == "reduction_cells.py"
@@ -128,6 +131,7 @@ def test_kernel_interrupt_does_not_publish_a_hanging_cell(app, tmp_path):
     window = MainWindow(path, tmp_path/"registry")
     try:
         window.start_console()
+        assert window.kernel is not None, window.log.toPlainText()
         wait_until(app, lambda: window.kernel.ready and not window.kernel.busy)
         window.select_cell(4)
         window.run_to_here()

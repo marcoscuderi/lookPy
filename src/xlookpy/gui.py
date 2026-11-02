@@ -553,7 +553,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.workspace_status.setText("Starting isolated IPython kernel in the current Python environment…")
             except Exception as exc:
                 self.kernel = None
-                self.log.appendPlainText(f"Cannot start IPython: {exc}")
+                import traceback
+                self.log.appendPlainText("Cannot start IPython:\n"+traceback.format_exc())
                 self._pending_workspace_action = None
                 return False
         self.console_dock.show()
