@@ -110,8 +110,9 @@ working foundation, not a complete Xlook port.
 - [Baseline provenance](docs/BASELINE.md)
 - [Validation and limitations](VALIDATION.md)
 
-Rate-and-state forward/inverse modelling remains deferred. Section execution,
-advanced catalogues and additional Xlook compatibility are future work.
+Rate-and-state forward/inverse modelling, advanced catalogues and additional
+Xlook compatibility remain future work. Cell execution and IPython are available
+on the workspace test branch described below.
 
 ## rawPy-style mock analysis (0.2.0a1 test branch)
 

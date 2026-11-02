@@ -1,13 +1,15 @@
 # Validation of version 0.3.0a1 (cell workspace trial)
 
-Local Linux checks: **53 passed, 3 skipped**. This execution sandbox forbids local
+Local Linux checks: **55 passed, 3 skipped**. This execution sandbox forbids local
 socket binding, so the three full IPython-process GUI tests must run in GitHub CI
 on Linux and macOS. Those tests explicitly fail rather than skip if CI lacks
 socket support. Local tests exercise the real IPython shell hooks in-process,
 cell namespace/replay, derived-channel replacement and invalidation, failed-cell
 recovery, publication, conversion parity with both existing demo and actual-data
 templates, BRAVA profile mapping/provenance and all accepted numerical/GUI tests.
-The live cross-platform process-test result is recorded on the PR.
+The three real-process tests also passed on both GitHub Linux and macOS runners.
+An additional socket-free regression verifies threaded-client startup ordering
+and cleanup if startup fails. The latest complete CI result is recorded on the PR.
 
 The new GUI tests exercise a real separate kernel, shared cells/console state,
 plotting, command insertion, fresh publication, failure retention, conversion,
