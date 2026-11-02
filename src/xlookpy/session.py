@@ -26,21 +26,21 @@ class Session:
         self.export_channels = None
         self.config = {}
 
-    def load(self, path, *, units=None):
+    def load(self, path, *, units=None, reader=None, dataendianness="little"):
         if self.experiment is not None:
-            raise ValueError("Version 0.1 supports one raw experiment per session.")
+            raise ValueError("This runner supports one raw experiment per session.")
         path = Path(path).expanduser()
         if not path.is_absolute():
             path = self.project/path
         raw_hash = file_digest(path)
-        exp = load_file(path, units=units, session=self)
+        exp = load_file(path, units=units, session=self, reader=reader, dataendianness=dataendianness)
         if self.pinned:
             old = self.pinned["inputs"]
             if len(old) != 1 or old[0]["sha256"] != raw_hash:
                 raise ValueError("Replay raw-file fingerprint differs from the recorded experiment.")
         self.experiment = exp
         self.inputs.append({"path": os.path.relpath(path, self.project), "sha256": raw_hash,
-                            "size_bytes": path.stat().st_size, "units": deepcopy(units or {})})
+                            "size_bytes": path.stat().st_size, "units": deepcopy(units or {}), "reader": reader, "dataendianness": dataendianness})
         return exp
 
     def calibration(self, identifier):
@@ -121,7 +121,7 @@ def run(script, *, registry=None, replay_manifest=None):
     try:
         selected = write_dat(exp, staging/"reduced.dat", session.export_channels)
         write_state(exp, staging/"state.npz")
-        versions = {name: importlib.metadata.version(name) for name in ("numpy", "pint", "nptdms")}
+        versions = {name: importlib.metadata.version(name) for name in ("numpy", "pint", "nptdms", "scipy")}
         manifest = {"schema_version": 1, "status": "success", "run_id": run_id,
                     "created_utc": datetime.now(timezone.utc).isoformat(),
                     "software": {"xlookpy": __version__, "python": platform.python_version(), **versions},

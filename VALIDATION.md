@@ -1,4 +1,23 @@
-# Validation of version 0.1.3a1 (trial branch)
+# Validation of version 0.2.0a1 (rawPy workflow trial)
+
+**42 tests passed locally** with Python 3.12 and offscreen Qt on Linux.
+The suite retains all 26 accepted checks and adds scientific regression tests for
+reset repair, unit-consistent force/stress stiffness, variable layer thickness,
+strain accumulation and missing increments, the exact rawPy geometrical recurrence,
+polynomial coefficients/diagnostics, stable sample-window slopes, frequency
+attenuation and uniform-sampling validation, text/record-ID round trips, both
+binary payload endiannesses and malformed files. A full 2,300-record synthetic
+reduction is run repeatedly, reloaded and replayed; a failed filter leaves the
+last successful manifest in place. The mock has 27 channels.
+
+These tests establish the stated numerical definitions. No claim is made of
+new validation against archived laboratory binary files or independent physical
+validation of the legacy geometrical correction. See `docs/RAWPY_FUNCTIONS.md`.
+Native Mac interaction remains an operator check. GitHub CI runs on Linux/macOS;
+its live status belongs to the pull request, not this static report.
+
+## Historical validation: 0.1.3a1
+
 
 Validation performed in Linux with Python 3.12. Automated desktop checks use
 Qt's offscreen platform. A native macOS window has not been exercised here.
@@ -77,7 +96,7 @@ and seconds-based running-regression derivative have their own documented
 definitions. Exact numerical compatibility with historical Xlook reduction
 recipes is a subsequent validation stage against the compiled C outputs.
 
-Mechanical-stage stitching, hysteresis, layer-thickness/strain reduction,
+Mechanical-stage stitching, hysteresis,
 automatic calibration fitting, publication figure export, section execution,
 the command console and stick-slip catalogues are deferred. Rate-and-state
 forward and inverse modelling are outside the current scope.

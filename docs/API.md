@@ -127,3 +127,9 @@ use New plot tab to create a panel, or Refresh axes to replace the active
 panel. Dropdown changes alone do not redraw. Existing user-created tabs refresh
 on a rerun; opening another project starts with no tabs. These display choices
 do not alter reduced arrays or scientific parameters.
+
+## rawPy workflow extension
+
+See [the complete function reference](RAWPY_FUNCTIONS.md) for all public reduction
+operations, legacy reader mappings, units, examples and scientific conventions.
+The full working example is `examples/rawpy_mock/reduction.py`.

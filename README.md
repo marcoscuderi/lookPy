@@ -112,3 +112,10 @@ working foundation, not a complete Xlook port.
 
 Rate-and-state forward/inverse modelling remains deferred. Section execution,
 advanced catalogues and additional Xlook compatibility are future work.
+
+## rawPy-style mock analysis (0.2.0a1 test branch)
+
+Start with the [Mac test procedure](docs/testing/RAWPY_ANALYSIS_MAC.md),
+[complete function reference](docs/RAWPY_FUNCTIONS.md), and
+[worked reduction](examples/rawpy_mock/reduction.py).
+All mock constants are synthetic; no real experiment data are included.

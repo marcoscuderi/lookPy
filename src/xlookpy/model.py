@@ -3,6 +3,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 import numpy as np
 from .util import factor
+from .analysis import AnalysisOperations
 
 
 @dataclass(frozen=True)
@@ -38,7 +39,7 @@ class Channel:
         return np.isfinite(self.values)
 
 
-class Experiment:
+class Experiment(AnalysisOperations):
     def __init__(self, channels, *, metadata=None, record_ids=None, session=None):
         if "record_id" in channels:
             raise ValueError("record_id is reserved for original row numbers, not a measured channel.")

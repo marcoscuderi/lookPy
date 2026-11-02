@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.0a1 — rawPy workflow test version
+
+- Add offset repair, constant shifts/stiffness correction, layer thickness, strain,
+  explicit legacy geometrical thinning, sample-window running slopes, interval
+  polynomial fitting and SOS low-pass filtering. Preserve inputs and record parameters.
+- Add BRAVA/rawPy two-header text and legacy Xlook binary readers, including
+  endian selection and explicit missing tails. Round-trip exported original IDs.
+- Add deterministic mock experiment, complete function reference and Mac test guide.
+- Add SciPy dependency and record its version in manifests.
+- Keep accepted embedded editor, contact zero and manual plotting behaviour.
+
 ## Unreleased
 
 ## 0.1.3a1 — manual plotting (under operator review)
