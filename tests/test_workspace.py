@@ -61,15 +61,15 @@ def test_console_replaces_only_derived_channels_and_invalidates_dependents(tmp_p
     w = Workspace(path, Registry(tmp_path/"registry"))
     w.execute(source, 2, through=True)
     e = w.namespace["exp"]
-    w.session._allow_replace = True
     e.zero_at("d", record=2, output="slip")
     assert "v" not in e.channels
     np.testing.assert_array_equal(e["slip"].values, [0, 0, 0, 1, 2])
     with pytest.raises(ValueError, match="already exists"):
         e.zero_at("d", record=1, output="d")
-    with pytest.raises(ValueError, match="different output"):
-        e.zero_at("slip", record=2, output="slip")
-    w.session._allow_replace = False
+    before_history = len(e.history)
+    e.zero_at("slip", record=2)
+    assert len(e.history) == before_history+1
+    assert e.history[-1]["input_revisions"]["slip"] == e.history[-1]["replaces_revision"]
     w.dirty = True
     w.namespace["console_only"] = 10
     w.execute(source, 2)
@@ -94,9 +94,7 @@ def test_run_all_excludes_console_edits_and_publishes_saved_source(tmp_path):
     path, source = script(tmp_path)
     w = Workspace(path, Registry(tmp_path/"registry"))
     w.execute(source, 2, through=True)
-    w.session._allow_replace = True
     w.namespace["exp"].zero_at("d", record=3, output="slip")
-    w.session._allow_replace = False
     w.dirty = True
     manifest = w.run_all(source)
     e = read_state(tmp_path/manifest["outputs"]["state"], manifest)

@@ -27,7 +27,6 @@ class KernelRuntime:
         self._console_source = info.raw_cell
         self.workspace.dirty = True
         self.workspace.published = None
-        self.workspace.session._allow_replace = True
         self._console_token = _ACTIVE.set(self.workspace.session)
 
     def after_console(self, result):
@@ -37,7 +36,6 @@ class KernelRuntime:
         if self._console_token is not None:
             _ACTIVE.reset(self._console_token)
             self._console_token = None
-        self.workspace.session._allow_replace = False
         error = result.error_before_exec or result.error_in_exec
         if error:
             self.workspace.failed = True

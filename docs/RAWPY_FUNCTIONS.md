@@ -13,7 +13,8 @@ tracked example scripts for your own experiments.
 ## Conventions
 
 * Channel names, not arbitrary arrays, identify inputs.
-* `output=` names a NEW channel. Choose another name instead of overwriting.
+* Transformations default to updating the working input when `output=` is omitted.
+  A different output name keeps an intentional comparison. Original inputs are protected.
 * `exp.records(a, b)` means inclusive ORIGINAL zero-based record IDs. Slicing
   preserves IDs; an ID is not elapsed time or the current array position.
 * Operations return `exp` for chaining, except `fit` (diagnostic dictionary),
@@ -178,3 +179,5 @@ Butterworth order; the forward/backward magnitude response is squared. There can
 be transients at selected boundaries: compare input and output near both ends.
 Values outside selection stay unchanged; a whole-signal filter includes the last
 sample, correcting rawPy's default `[:-1]` omission.
+
+Working-channel revisions and default compact export: [Mac update guide](testing/CHANNEL_UPDATES_MAC.md).

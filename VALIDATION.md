@@ -1,3 +1,16 @@
+# Validation of version 0.3.1a1 (working-channel update)
+
+Local Linux suite: **63 passed, 3 skipped**. This sandbox disallows the local
+sockets needed for three full-kernel GUI tests; the same tests run in Linux/Mac
+GitHub CI. New checks cover repeated insertion/undo and execution-style colouring
+refreshes, indentation/triple-quote recovery, in-place numerical transformation
+chains, protected ADC values, full append-only revision histories, transitive
+invalidation, atomic failed updates, compact BRAVA channel lists/default exports,
+explicit comparison branches and exact exported-data replay.
+
+Native Mac rendering and the user's real reduction remain operator validation.
+The latest full cross-platform CI result is attached to PR #5.
+
 # Validation of version 0.3.0a1 (cell workspace trial)
 
 Local Linux checks: **55 passed, 3 skipped**. This execution sandbox forbids local

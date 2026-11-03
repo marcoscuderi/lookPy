@@ -72,3 +72,46 @@ def test_editor_controls_persist_and_do_not_edit_source(app, tmp_path):
     assert editor.toPlainText() == "x = 10\n"
     panel.close()
     second.close()
+
+
+def test_highlighting_follows_current_rows_before_and_after_deferred_refresh(app, tmp_path):
+    editor=CodeEditor(settings=QtCore.QSettings(str(tmp_path/"colors.ini"), QtCore.QSettings.Format.IniFormat))
+    def colour(row, column):
+        block=editor.document().findBlockByNumber(row)
+        ranges=block.layout().formats()
+        matching=[r for r in ranges if r.start <= column < r.start+r.length]
+        return QtGui.QTextCharFormat(matching[-1].format) if matching else QtGui.QTextCharFormat()
+    code='# a comment\nvalue = 42\nif value:\n    print(value)\n'
+    for _ in range(10):
+        editor.setPlainText(code)
+        editor.refresh_highlighting()
+        cursor=editor.textCursor()
+        cursor.setPosition(0)
+        cursor.insertText('# another comment\n')
+        editor.highlighter.rehighlight()  # Before the timer: no stale row spans.
+        assert colour(2,8).foreground().color().name() == '#ae81ff'
+        assert not colour(2,0).fontItalic()
+        app.processEvents()
+        assert colour(3,0).foreground().color().name() == '#f92672'
+        editor.undo()
+        app.processEvents()
+        editor.refresh_highlighting()
+        assert editor.toPlainText() == code
+        assert colour(1,8).foreground().color().name() == '#ae81ff'
+        assert not colour(1,0).fontItalic()
+    editor.close()
+
+
+def test_recovery_from_bad_indentation_and_triple_quote_edits(app, tmp_path):
+    editor=CodeEditor(settings=QtCore.QSettings(str(tmp_path/"recover.ini"), QtCore.QSettings.Format.IniFormat))
+    bad='if True:\n    x = 1\n  y = 2\nanswer = 42\n'
+    assert (3,9,11,'number') in python_spans(bad)
+    editor.setPlainText('"""unfinished\nanswer = 42\n')
+    editor.refresh_highlighting()
+    cursor=editor.textCursor();cursor.setPosition(0);cursor.deleteChar();cursor.deleteChar();cursor.deleteChar()
+    app.processEvents();editor.refresh_highlighting()
+    block=editor.document().findBlockByNumber(1)
+    formats=block.layout().formats()
+    assert any(r.start == 9 and r.format.foreground().color().name() == '#ae81ff' for r in formats)
+    assert not editor.document().findBlockByNumber(1).layout().formats()[0].format.fontItalic()
+    editor.close()

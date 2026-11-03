@@ -388,6 +388,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.script.write_text(self.editor.toPlainText(), encoding="utf-8")
 
     def run_all(self):
+        self.editor.refresh_highlighting()
         if not self.script or self.process is not None:
             return
         if self.kernel is not None and self.kernel.busy:
@@ -582,6 +583,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.workspace_status.setText("Console trial — add accepted commands to the script, then Run all to validate.")
 
     def workspace_action(self, action):
+        self.editor.refresh_highlighting()
         if not self.script or self.process is not None:
             return
         if self.kernel is not None and self.kernel.busy:
@@ -632,6 +634,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.update_plot_controls()
 
     def workspace_received(self, state):
+        self.editor.refresh_highlighting()
         self._executed_source = state["source"]
         self._workspace_cells = state["cells"]
         snap = state.get("snapshot")

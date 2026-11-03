@@ -41,18 +41,18 @@ def load(path, *, profile=None, units=None, reader=None, dataendianness="little"
     if exp.metadata.get("reader") != "nptdms":
         raise ValueError("The BRAVA profile requires TDMS with the ADC group.")
     mapping = [
-        ("ADC/Time", "s", "absolute_time"),
+        ("ADC/Time", "s", "time"),
         ("ADC/Vertical Load", "kN", "vertical_load"),
         ("ADC/Horizontal Load", "kN", "horizontal_load"),
-        ("ADC/Vertical Displacement", "um", "vertical_displacement_um"),
-        ("ADC/Horizontal Displacement", "um", "horizontal_displacement_um"),
+        ("ADC/Vertical Displacement", "um", "vertical_displacement_mm"),
+        ("ADC/Horizontal Displacement", "um", "horizontal_displacement_mm"),
     ]
     # Check the complete mapping before starting conversions.
     for source, _, _ in mapping:
         props = exp[source].metadata.get("properties", {})
         if "Slope" not in props or "Intercept" not in props:
             raise ValueError(f"BRAVA profile needs Slope/Intercept on {source}. Use load without profile and map explicitly.")
-    definition = {"name": "BRAVA", "revision": 1, "mapping": mapping,
+    definition = {"name": "BRAVA", "revision": 2, "mapping": mapping,
                   "time_origin": "first original record", "horizontal_displacement_scale": -1,
                   "displacement_output_unit": "mm",
                   "note": "Operator-selected acquisition convention; no sensor recalibration or frame correction."}
@@ -60,9 +60,9 @@ def load(path, *, profile=None, units=None, reader=None, dataendianness="little"
     for source, unit, output in mapping:
         exp.convert_acquisition(source, unit=unit, output=output)
     first = int(exp.record_ids[0])
-    exp.zero("absolute_time", reference=exp.records(first, first), output="time")
-    exp.convert("vertical_displacement_um", unit="mm", output="vertical_displacement_mm")
-    exp.convert("horizontal_displacement_um", unit="mm", scale=-1, output="horizontal_displacement_mm")
+    exp.zero("time", reference=exp.records(first, first))
+    exp.convert("vertical_displacement_mm", unit="mm")
+    exp.convert("horizontal_displacement_mm", unit="mm", scale=-1)
     print("BRAVA profile: custom ADC Slope/Intercept applied; forces kN; displacement mm; horizontal sign -1; time starts at first record. Verify these apparatus conventions.")
     return exp
 
@@ -72,7 +72,11 @@ def calibration(identifier):
 
 
 def save(exp, *, channels=None):
-    """Choose final export channels. Only a successful fresh Run all publishes."""
+    """Choose final exports; default to current working channels, excluding raw inputs.
+
+    Only a successful fresh Run all publishes. Explicit channel lists can include
+    originals when requested; prior working revisions live in operation history.
+    """
     return _session().export(exp, channels=channels)
 
 

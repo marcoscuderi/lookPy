@@ -44,9 +44,9 @@ Run all publishes the official versioned output files. The kernel is launched
 with the application's sys.executable and is shut down when switching projects
 or closing the GUI. Kernel failure requires Restart workspace.
 
-Console commands may replace derived outputs and invalidate downstream derived
-channels. Input/raw channels remain protected; using an input as its own output
-is refused. The saved recipe is never automatically edited from console history.
+Scripts and console commands may update derived working channels in place and
+invalidate downstream derived channels. Original/raw inputs remain protected.
+Every overwrite appends a numbered revision; old operation history is retained. The saved recipe is never automatically edited from console history.
 All console commands mark the workspace exploratory, since arbitrary Python
 mutations cannot be reliably classified. Insert accepted commands into the
 script and validate with Run all. Rebuilding a prefix discards console-only state.
@@ -68,3 +68,5 @@ Cell source is ordinary Python; IPython magics belong in the exploratory console
 The accepted numerical functions and manual plot lifecycle are unchanged.
 The replay implementation prioritizes transparent scientific state over fast
 arbitrary-object checkpoints; rerunning a prefix can reload a large experiment.
+
+See [compact channels and highlighting fixes](testing/CHANNEL_UPDATES_MAC.md) for 0.3.1a1.

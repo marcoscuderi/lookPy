@@ -33,7 +33,15 @@ def python_spans(source):
     try:
         for item in stream:
             tokens.append(item)
-    except (tokenize.TokenError, IndentationError, SyntaxError) as exc:
+    except IndentationError:
+        # Incomplete pasted/edited indentation must not remove colouring from
+        # the rest of the file. Lex without indentation, then restore columns.
+        original = source.split("\n")
+        normalized = [line.lstrip(" \t") for line in original]
+        offsets = [len(a)-len(b) for a, b in zip(original, normalized)]
+        return [(row, a+offsets[row], b+offsets[row], style)
+                for row, a, b, style in python_spans("\n".join(normalized))]
+    except (tokenize.TokenError, SyntaxError) as exc:
         error = exc
     lines = source.split("\n")
     spans = []
@@ -82,6 +90,7 @@ class PythonHighlighter(QtGui.QSyntaxHighlighter):
     def __init__(self, document, theme="Monokai"):
         super().__init__(document)
         self.spans = {}
+        self.source = None
         self.set_theme(theme)
 
     def set_theme(self, theme):
@@ -89,20 +98,30 @@ class PythonHighlighter(QtGui.QSyntaxHighlighter):
         for name, color in THEMES[theme].items():
             fmt = QtGui.QTextCharFormat()
             fmt.setForeground(QtGui.QColor(color))
-            if name == "comment":
-                fmt.setFontItalic(True)
+            fmt.setFontWeight(QtGui.QFont.Weight.Normal)
+            fmt.setFontItalic(name == "comment")
+            fmt.setFontUnderline(False)
             self.formats[name] = fmt
         self.refresh()
 
+    def update_spans(self):
+        source = self.document().toPlainText()
+        if source != self.source:
+            self.source = source
+            self.spans = {}
+            for row, start, end, style in python_spans(source):
+                self.spans.setdefault(row, []).append((start, end, style))
+
     def refresh(self):
-        self.spans = {}
-        for row, start, end, style in python_spans(self.document().toPlainText()):
-            self.spans.setdefault(row, []).append((start, end, style))
+        self.update_spans()
         self.rehighlight()
 
     def highlightBlock(self, text):
+        # Qt invokes this before a deferred whole-document refresh too. Always
+        # use CURRENT source offsets; inserting lines must never reuse old rows.
+        self.update_spans()
+        self.setFormat(0, len(text.encode("utf-16-le"))//2, self.formats["text"])
         for start, end, style in self.spans.get(self.currentBlock().blockNumber(), []):
-            # Qt positions count UTF-16 units; Python token columns count codepoints.
             a = len(text[:start].encode("utf-16-le"))//2
             b = len(text[:end].encode("utf-16-le"))//2
             self.setFormat(a, b-a, self.formats[style])
@@ -150,7 +169,7 @@ class CodeEditor(QtWidgets.QPlainTextEdit):
         self.highlighter = PythonHighlighter(self.document(), self.theme)
         self.timer = QtCore.QTimer(self)
         self.timer.setSingleShot(True)
-        self.timer.setInterval(35)
+        self.timer.setInterval(0)
         self.timer.timeout.connect(self.highlighter.refresh)
         self.textChanged.connect(self.changed)
         self.blockCountChanged.connect(self.update_gutter)
@@ -179,6 +198,10 @@ class CodeEditor(QtWidgets.QPlainTextEdit):
             self._source = source
             self.timer.start()
             self.sourceChanged.emit()
+
+    def refresh_highlighting(self):
+        self.timer.stop()
+        self.highlighter.refresh()
 
     def set_font_size(self, points):
         points = max(8, min(32, int(points)))

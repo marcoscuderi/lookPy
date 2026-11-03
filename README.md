@@ -126,3 +126,9 @@ All mock constants are synthetic; no real experiment data are included.
 Use your real experiment with [cell execution and IPython](docs/CELL_WORKSPACE.md).
 The [Mac procedure](docs/testing/CELL_WORKSPACE_MAC.md) covers updating, converting
 a working copy of your current script, testing and returning to main.
+
+## Highlighting and compact channels (0.3.1a1)
+
+The [Mac update guide](docs/testing/CHANNEL_UPDATES_MAC.md) describes stable editor
+colouring, in-place working-channel updates, preserved revision history and
+reduced exports containing only current working values by default.

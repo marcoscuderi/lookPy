@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.1a1 — highlighting and working-channel updates
+
+- Refresh token spans from current source and reset complete display formats;
+  recover colouring after indentation edits and refresh at execution boundaries.
+- Allow in-place transformations of working channels in scripts and console.
+  Preserve raw inputs, append every operation revision and invalidate stale
+  descendants without erasing prior history.
+- Keep only five final BRAVA profile outputs alongside original ADC inputs.
+- Default reduced text exports to current working channels; originals remain
+  available for plotting and explicitly selected exports.
+
 ## 0.3.0a1 — cell workspace test version
 
 - Add top-level # %% scripts, run cell/run to here, prefix replay, execution states
