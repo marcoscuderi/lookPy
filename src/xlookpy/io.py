@@ -67,7 +67,7 @@ def load_tdms(path, *, units, session):
 
 
 def write_dat(exp, path, channels):
-    selected = list(channels or exp.channels)
+    selected = list(exp.export_columns if channels is None else channels)
     if not selected or len(selected) != len(set(selected)):
         raise ValueError("Export requires one or more unique channel names.")
     # Original row IDs are always the first column, including when explicitly selected.

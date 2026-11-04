@@ -153,16 +153,15 @@ are retained; automatic cleanup is not implemented.
   and the next implementation steps.
 - [Validation](../VALIDATION.md): checks performed and remaining limitations.
 
-This release supports **Run all**, one aligned experiment per session, CSV and
-the supplied apparatus's ADC-group TDMS layout. It includes no rate-and-state
-modelling, inversion, stick-slip catalogue, automatic calibration fitting,
-general command console, or Run section. It does not yet import Xlook recipes
-or its binary format. The desktop log is output, not an interactive interpreter.
-
-The GUI includes basic interactive analysis through unit conversion, zeroing,
-masking, stress, friction, elastic correction and running regression slope.
-Additional Xlook operations and publication figure export will be added on the
-same numerical foundation after this pilot workflow is reviewed.
+The accepted numerical workflow supports Run all, original-record selections,
+CSV/BRAVA text/legacy binary and the apparatus ADC-group TDMS reader. See the
+[function reference](RAWPY_FUNCTIONS.md) for current operations. The workspace
+trial adds [top-level cells and IPython](CELL_WORKSPACE.md); use the
+[real-experiment Mac procedure](testing/CELL_WORKSPACE_MAC.md). Existing
+`def reduce(session)` files continue to run in batch mode; convert a new working
+copy to use cells and the console. Rate-and-state modelling, inversion,
+stick-slip catalogues, automatic calibration fitting and publication figure
+export remain deferred. There is no full Xlook command-recipe compatibility claim.
 
 Scripts are ordinary trusted Python with access to your computer. Transactional
 publication applies to package-managed outputs, not arbitrary file writes made

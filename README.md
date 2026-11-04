@@ -110,8 +110,9 @@ working foundation, not a complete Xlook port.
 - [Baseline provenance](docs/BASELINE.md)
 - [Validation and limitations](VALIDATION.md)
 
-Rate-and-state forward/inverse modelling remains deferred. Section execution,
-advanced catalogues and additional Xlook compatibility are future work.
+Rate-and-state forward/inverse modelling, advanced catalogues and additional
+Xlook compatibility remain future work. Cell execution and IPython are available
+on the workspace test branch described below.
 
 ## rawPy-style mock analysis (0.2.0a1 test branch)
 
@@ -119,3 +120,15 @@ Start with the [Mac test procedure](docs/testing/RAWPY_ANALYSIS_MAC.md),
 [complete function reference](docs/RAWPY_FUNCTIONS.md), and
 [worked reduction](examples/rawpy_mock/reduction.py).
 All mock constants are synthetic; no real experiment data are included.
+
+## Interactive cell workspace (0.3.0a1 test branch)
+
+Use your real experiment with [cell execution and IPython](docs/CELL_WORKSPACE.md).
+The [Mac procedure](docs/testing/CELL_WORKSPACE_MAC.md) covers updating, converting
+a working copy of your current script, testing and returning to main.
+
+## Highlighting and compact channels (0.3.1a1)
+
+The [Mac update guide](docs/testing/CHANNEL_UPDATES_MAC.md) describes stable editor
+colouring, in-place working-channel updates, preserved revision history and
+reduced exports containing only current working values by default.

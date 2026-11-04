@@ -78,7 +78,7 @@ class Session:
 
 
 def run(script, *, registry=None, replay_manifest=None):
-    """Execute trusted Python with def reduce(session), from fresh raw state.
+    """Execute trusted cell-style or def reduce(session) Python from fresh raw state.
 
     Only this runner's outputs are transactional. Arbitrary user Python file
     writes are outside the transaction; scripts should export through Session.
@@ -95,12 +95,26 @@ def run(script, *, registry=None, replay_manifest=None):
         if pinned["software"]["xlookpy"] != __version__:
             raise ValueError("Replay needs the recorded xlookpy version.")
     session = Session(script.parent, registry=registry, pinned=pinned)
-    namespace = {"__name__": "__xlook_reduction__", "__file__": str(script)}
-    exec(compile(text, str(script), "exec"), namespace)
-    reducer = namespace.get("reduce")
-    if not callable(reducer):
-        raise ValueError("The script must define reduce(session). See examples/demo/reduction.py.")
-    reducer(session)
+    from .workflow import using_session, vocabulary, StopReduction
+    namespace = {"__name__": "__xlook_reduction__", "__file__": str(script), **vocabulary(session)}
+    with using_session(session):
+        try:
+            exec(compile(text, str(script), "exec"), namespace)
+            reducer = namespace.get("reduce")
+            if callable(reducer):
+                reducer(session)
+        except StopReduction:
+            pass
+    return publish(session, script, text, script_sha, pinned=pinned)
+
+
+def publish(session, script, text, script_sha, *, pinned=None):
+    """Publish an already completed fresh execution; interactive cells never call this.
+
+    Arbitrary Python side effects are not transactional; managed outputs are.
+    """
+    from . import __version__
+    script = Path(script)
     exp = session.experiment
     if exp is None:
         raise ValueError("The reduction did not load an experiment.")

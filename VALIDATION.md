@@ -1,4 +1,36 @@
-# Validation of version 0.2.0a1 (rawPy workflow trial)
+# Validation of version 0.3.1a1 (working-channel update)
+
+Local Linux suite: **63 passed, 3 skipped**. This sandbox disallows the local
+sockets needed for three full-kernel GUI tests; the same tests run in Linux/Mac
+GitHub CI. New checks cover repeated insertion/undo and execution-style colouring
+refreshes, indentation/triple-quote recovery, in-place numerical transformation
+chains, protected ADC values, full append-only revision histories, transitive
+invalidation, atomic failed updates, compact BRAVA channel lists/default exports,
+explicit comparison branches and exact exported-data replay.
+
+Native Mac rendering and the user's real reduction remain operator validation.
+The latest full cross-platform CI result is attached to PR #5.
+
+# Validation of version 0.3.0a1 (cell workspace trial)
+
+Local Linux checks: **55 passed, 3 skipped**. This execution sandbox forbids local
+socket binding, so the three full IPython-process GUI tests must run in GitHub CI
+on Linux and macOS. Those tests explicitly fail rather than skip if CI lacks
+socket support. Local tests exercise the real IPython shell hooks in-process,
+cell namespace/replay, derived-channel replacement and invalidation, failed-cell
+recovery, publication, conversion parity with both existing demo and actual-data
+templates, BRAVA profile mapping/provenance and all accepted numerical/GUI tests.
+The three real-process tests also passed on both GitHub Linux and macOS runners.
+An additional socket-free regression verifies threaded-client startup ordering
+and cleanup if startup fails. The latest complete CI result is recorded on the PR.
+
+The new GUI tests exercise a real separate kernel, shared cells/console state,
+plotting, command insertion, fresh publication, failure retention, conversion,
+interrupt and shutdown. Native Mac mouse/keyboard interaction with the user's
+real experiment remains operator validation. No new demonstration experiment
+or real experimental data were added.
+
+## Historical validation: 0.2.0a1
 
 **42 tests passed locally** with Python 3.12 and offscreen Qt on Linux.
 The suite retains all 26 accepted checks and adds scientific regression tests for
@@ -97,6 +129,5 @@ definitions. Exact numerical compatibility with historical Xlook reduction
 recipes is a subsequent validation stage against the compiled C outputs.
 
 Mechanical-stage stitching, hysteresis,
-automatic calibration fitting, publication figure export, section execution,
-the command console and stick-slip catalogues are deferred. Rate-and-state
+automatic calibration fitting, publication figure export and stick-slip catalogues are deferred. Rate-and-state
 forward and inverse modelling are outside the current scope.

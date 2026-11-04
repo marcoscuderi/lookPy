@@ -1,6 +1,7 @@
 """Channel operations corresponding to the rawPy laboratory workflow.
 
-All selections use inclusive original record IDs. Inputs are never overwritten.
+Selections use inclusive original record IDs. Raw inputs are protected; working
+transformations update in place unless a separate output name is supplied.
 """
 import numpy as np
 from .util import factor, json_value
@@ -20,8 +21,9 @@ class AnalysisOperations:
             raise ValueError(f"Original record {record} is not present in this experiment.")
         return int(pos[0])
 
-    def shift(self, source, *, value, output, unit=None, records=None):
+    def shift(self, source, *, value, output=None, unit=None, records=None):
         """Add a constant in compatible units, optionally within one interval."""
+        output = source if output is None else output
         c = self[source]
         if not np.isfinite(value):
             raise ValueError("Shift value must be finite.")
@@ -31,11 +33,12 @@ class AnalysisOperations:
         return self._put(output, y, c.unit, {"operation": "shift", "input": source,
                          "value": delta, "records": records.json() if records else None})
 
-    def offset(self, source, *, records, output):
+    def offset(self, source, *, records, output=None):
         """Flatten [start,end] at the start value; shift all later data to reconnect.
 
         This removes the measured change between the two endpoints, not a trend.
         """
+        output = source if output is None else output
         self._selection(records)
         a, b = self._position(records.start), self._position(records.end)
         c = self[source]
@@ -48,13 +51,14 @@ class AnalysisOperations:
                          "records": records.json(), "removed_change": float(c.values[b]-c.values[a]),
                          "algorithm": "flatten interval; shift subsequent samples; earlier samples unchanged"})
 
-    def elastic_correct(self, source, *, load, stiffness, stiffness_unit, reference_record, output):
+    def elastic_correct(self, source, *, load, stiffness, stiffness_unit, reference_record, output=None):
         """Constant stiffness: (u-u_ref) - (load-load_ref)/k.
 
         load can be force or stress; stiffness_unit must then be force/length
         or stress/length, respectively. Prefer correct_displacement(using=...)
         for centrally managed calibrations and nonlinear apparatus models.
         """
+        output = source if output is None else output
         if not np.isfinite(stiffness) or stiffness <= 0:
             raise ValueError("Stiffness must be finite and positive.")
         i = self._position(reference_record)
@@ -224,13 +228,14 @@ class AnalysisOperations:
                           "records": records.json() if records else None,
                           "algorithm": "centered sample-window OLS; shortened edge windows; finite contiguous segments"})
 
-    def low_pass(self, source, *, time="time", cutoff_Hz, output, records=None,
+    def low_pass(self, source, *, time="time", cutoff_Hz, output=None, records=None,
                  order=1, fs_Hz=None, uniform_rtol=0.001):
         """Zero-phase SOS Butterworth filtering on one uniformly sampled interval.
 
         Outside the interval values are unchanged. Reject gaps, NaNs, mixed
         sampling rates and insufficient padding length rather than bridging them.
         """
+        output = source if output is None else output
         from scipy.signal import butter, sosfiltfilt
         order = _integer(order, "order")
         if not np.isfinite(uniform_rtol) or not 0 <= uniform_rtol <= 0.1:

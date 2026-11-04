@@ -1,8 +1,7 @@
 """Desktop shell: embedded script editing, explicit plot tabs and picking.
 
-No numerical reduction functions are implemented here. Run section and a
-general Python console are intentionally deferred until execution semantics
-are defined and tested.
+Numerical functions remain in the core. Cell scripts and the console share an
+isolated IPython process; legacy reduce(session) scripts keep their batch worker.
 """
 import json
 import os
@@ -16,6 +15,8 @@ from .io import read_state
 from .util import file_digest
 from .editor import CodeEditor, editor_panel
 from . import __version__
+from .workspace import cells, legacy_source, convert_legacy
+from .console import WorkspaceConsole, KernelController
 
 pg.setConfigOptions(background="w", foreground="#203647", antialias=False)
 
@@ -214,6 +215,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.exp = None
         self.manifest = None
         self.process = None
+        self.kernel = None
+        self._pending_workspace_action = None
+        self._executed_source = ""
+        self._workspace_cells = []
+        self._updating_cells = False
         self.tabs = QtWidgets.QTabWidget()
         self.tabs.setTabsClosable(True)
         self.tabs.tabCloseRequested.connect(self.close_tab)
@@ -260,8 +266,40 @@ class MainWindow(QtWidgets.QMainWindow):
         self.update_plot_controls()
         left_layout.addWidget(self.info)
         left_dock = self.add_dock("Experiment and channels", left, QtCore.Qt.DockWidgetArea.LeftDockWidgetArea)
-        right_dock = self.add_dock("Reduction script", editor_panel(self.editor), QtCore.Qt.DockWidgetArea.RightDockWidgetArea)
+        script_panel = editor_panel(self.editor)
+        self.workspace_status = QtWidgets.QLabel("Cell workspace not started")
+        self.workspace_status.setWordWrap(True)
+        script_panel.layout().insertWidget(1, self.workspace_status)
+        self.cell_list = QtWidgets.QListWidget()
+        self.cell_list.setMaximumHeight(150)
+        self.cell_list.currentRowChanged.connect(self.select_cell)
+        script_panel.layout().addWidget(self.cell_list)
+        self.editor.cursorPositionChanged.connect(self.follow_cell)
+        right_dock = self.add_dock("Reduction script", script_panel, QtCore.Qt.DockWidgetArea.RightDockWidgetArea)
         bottom_dock = self.add_dock("Execution log and picked points", self.log, QtCore.Qt.DockWidgetArea.BottomDockWidgetArea)
+        console_panel = QtWidgets.QWidget()
+        console_layout = QtWidgets.QVBoxLayout(console_panel)
+        console_controls = QtWidgets.QHBoxLayout()
+        self.start_console_button = QtWidgets.QPushButton("Start IPython")
+        self.start_console_button.clicked.connect(self.start_console)
+        console_controls.addWidget(self.start_console_button)
+        self.console_commands = QtWidgets.QComboBox()
+        self.console_commands.setMinimumContentsLength(24)
+        console_controls.addWidget(self.console_commands, 1)
+        self.insert_command_button = QtWidgets.QPushButton("Insert command into script")
+        self.insert_command_button.setToolTip("Insert the chosen submitted command at the editor cursor, without executing it.")
+        self.insert_command_button.clicked.connect(self.insert_console_command)
+        self.insert_command_button.setEnabled(False)
+        console_controls.addWidget(self.insert_command_button)
+        console_layout.addLayout(console_controls)
+        self.console = WorkspaceConsole()
+        self.console.banner = "IPython trials share the cell workspace. Run all rebuilds from the saved script."
+        self.console._control.setReadOnly(True)
+        self.console.executing.connect(self.console_started)
+        console_layout.addWidget(self.console)
+        self.console_dock = self.add_dock("IPython workspace", console_panel, QtCore.Qt.DockWidgetArea.BottomDockWidgetArea)
+        self.tabifyDockWidget(bottom_dock, self.console_dock)
+        bottom_dock.raise_()
         self.resizeDocks([left_dock, right_dock], [280, 480], QtCore.Qt.Orientation.Horizontal)
         self.resizeDocks([bottom_dock], [160], QtCore.Qt.Orientation.Vertical)
         toolbar = self.addToolBar("Project")
@@ -271,6 +309,15 @@ class MainWindow(QtWidgets.QMainWindow):
                                 ("List calibrations", self.list_calibrations)]:
             action = toolbar.addAction(title)
             action.triggered.connect(callback)
+        self.cell_actions = {}
+        for title, callback in [("Run cell", self.run_cell), ("Run to here", self.run_to_here),
+                                ("Restart workspace", self.restart_workspace),
+                                ("Convert to cell script", self.convert_script)]:
+            action = toolbar.addAction(title)
+            action.triggered.connect(callback)
+            self.cell_actions[title] = action
+        self.cell_shortcut = QtGui.QShortcut(QtGui.QKeySequence("Shift+Return"), self.editor)
+        self.cell_shortcut.activated.connect(self.run_cell)
         self.link_action = toolbar.addAction("Link matching X axes")
         self.link_action.setCheckable(True)
         self.link_action.setChecked(True)
@@ -297,8 +344,10 @@ class MainWindow(QtWidgets.QMainWindow):
             self.close_tab(0)
 
     def edited(self):
+        self.refresh_cells()
         if self.script:
-            self.statusBar().showMessage("Script edited — save and Run all to update results. Displayed results are from the last successful run.")
+            self.workspace_status.setText("Script edited — dependent results are outdated. Run all for reproducible results.")
+            self.statusBar().showMessage("Script edited — save and Run all to update results. Displayed results may be outdated.")
 
     def open_dialog(self):
         path, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Open reduction", "", "Python (*.py)")
@@ -309,6 +358,11 @@ class MainWindow(QtWidgets.QMainWindow):
         if self.process is not None:
             self.log.appendPlainText("Wait for or cancel the current run before opening another project.")
             return
+        self.shutdown_kernel()
+        self._executed_source = ""
+        self._workspace_cells = []
+        self.console_commands.clear()
+        self.insert_command_button.setEnabled(False)
         self.script = path.expanduser().resolve()
         self.editor.setPlainText(self.script.read_text(encoding="utf-8"))
         self.clear_tabs()
@@ -320,6 +374,8 @@ class MainWindow(QtWidgets.QMainWindow):
         for combo in self.selectors.values():
             combo.clear()
         self.update_plot_controls()
+        self.refresh_cells()
+        self.workspace_status.setText("Legacy batch script — convert a working copy for cells/console." if legacy_source(self.editor.toPlainText()) else "Cell script ready — Run cell or Run to here to begin.")
         self.setWindowTitle(f"Xlook Python — {self.script}")
         manifest = self.script.parent/"experiment.json"
         if manifest.exists():
@@ -332,9 +388,19 @@ class MainWindow(QtWidgets.QMainWindow):
             self.script.write_text(self.editor.toPlainText(), encoding="utf-8")
 
     def run_all(self):
+        self.editor.refresh_highlighting()
         if not self.script or self.process is not None:
             return
+        if self.kernel is not None and self.kernel.busy:
+            return
         self.save()
+        if not legacy_source(self.editor.toPlainText()):
+            # A fresh process excludes console-altered imports/module globals,
+            # not just variables in the visible script namespace.
+            self.shutdown_kernel()
+            self.workspace_action("all")
+            return
+        self.shutdown_kernel()
         self.running_script = self.script
         self.process = QtCore.QProcess(self)
         self.process.setProcessChannelMode(QtCore.QProcess.ProcessChannelMode.MergedChannels)
@@ -368,6 +434,9 @@ class MainWindow(QtWidgets.QMainWindow):
     def cancel(self):
         if self.process:
             self.process.kill()
+        if self.kernel is not None:
+            self.kernel.interrupt()
+            self.workspace_status.setText("Interrupt requested. Partial workspace state may require Run to here or restart.")
 
     def load_result(self):
         try:
@@ -377,53 +446,264 @@ class MainWindow(QtWidgets.QMainWindow):
             path = self.script.parent/manifest["outputs"]["state"]
             if file_digest(path) != manifest["outputs"]["state_sha256"]:
                 raise ValueError("Cached experiment fingerprint mismatch. Run the reduction again.")
-            selected = {key: combo.currentText() for key, combo in self.selectors.items()}
-            self.exp = read_state(path, manifest)
-            self.manifest = manifest
-            self.channels.setRowCount(len(self.exp.plot_columns))
-            for i, name in enumerate(self.exp.plot_columns):
-                c = self.exp[name]
-                unit = "row" if name == "record_id" else c.unit
-                for j, value in enumerate((name, unit, str((~c.valid).sum()))):
-                    item = QtWidgets.QTableWidgetItem(value)
-                    if name == "record_id":
-                        item.setToolTip("Original zero-based row number. Select it on an axis and compare with time to inspect sampling-rate changes.")
-                    self.channels.setItem(i, j, item)
-            for key, combo in self.selectors.items():
-                combo.clear()
-                if key == "right":
-                    combo.addItem("(none)")
-                combo.addItems(self.exp.plot_columns)
-            default_x = "time" if "time" in self.exp.channels else "record_id"
-            default_left = "shear_stress" if "shear_stress" in self.exp.channels else next(n for n in self.exp.plot_columns if n != default_x)
-            defaults = {"x": default_x, "left": default_left, "right": "(none)"}
-            for key, combo in self.selectors.items():
-                choice = selected[key] if combo.findText(selected[key]) >= 0 else defaults[key]
-                combo.setCurrentText(choice)
-            # Script plot requests remain in the manifest for compatibility.
-            # Only user-created tabs are displayed, including after a rerun.
-            self.tabs.blockSignals(True)
-            try:
-                for index in range(self.tabs.count()-1, -1, -1):
-                    panel = self.tabs.widget(index)
-                    missing = [n for n in (panel.spec["x"], panel.spec["left"], panel.spec.get("right")) if n and n not in self.exp.plot_columns]
-                    if missing:
-                        self.log.appendPlainText(f"Closed {panel.spec['title']}: channels unavailable in the new result: {', '.join(missing)}")
-                        self.close_tab(index)
-                    else:
-                        panel.update_plot(self.exp, panel.spec)
-            finally:
-                self.tabs.blockSignals(False)
-            self.link_plots()
-            self.sync_axis_selectors()
-            self.update_plot_controls()
-            self.info.setPlainText(f"Records: {len(self.exp):,}\nOriginal IDs: {self.exp.record_ids[0]}–{self.exp.record_ids[-1]}\nRun: {manifest['run_id']}\nCalibrations: {len(manifest['calibrations'])}\nRegistry: {self.registry.root}")
+            self.show_experiment(read_state(path, manifest), manifest)
             current = self.editor.toPlainText().encode()
             import hashlib
             stale = hashlib.sha256(current).hexdigest() != manifest["script"]["sha256"]
             self.statusBar().showMessage("Script differs from displayed results — Run all to update." if stale else "Reduction loaded. Choose channels and click New plot tab; Refresh axes updates the active tab.")
         except Exception as exc:
             self.log.appendPlainText(f"Cannot display result: {exc}")
+
+    def show_experiment(self, exp, manifest):
+        selected = {key: combo.currentText() for key, combo in self.selectors.items()}
+        self.exp = exp
+        if manifest.get("run_id") != "interactive":
+            self.manifest = manifest
+        self.channels.setRowCount(len(self.exp.plot_columns))
+        for i, name in enumerate(self.exp.plot_columns):
+            c = self.exp[name]
+            unit = "row" if name == "record_id" else c.unit
+            for j, value in enumerate((name, unit, str((~c.valid).sum()))):
+                item = QtWidgets.QTableWidgetItem(value)
+                if name == "record_id":
+                    item.setToolTip("Original zero-based row number. Select it on an axis and compare with time to inspect sampling-rate changes.")
+                self.channels.setItem(i, j, item)
+        for key, combo in self.selectors.items():
+            combo.clear()
+            if key == "right":
+                combo.addItem("(none)")
+            combo.addItems(self.exp.plot_columns)
+        default_x = "time" if "time" in self.exp.channels else "record_id"
+        default_left = "shear_stress" if "shear_stress" in self.exp.channels else next(n for n in self.exp.plot_columns if n != default_x)
+        defaults = {"x": default_x, "left": default_left, "right": "(none)"}
+        for key, combo in self.selectors.items():
+            choice = selected[key] if combo.findText(selected[key]) >= 0 else defaults[key]
+            combo.setCurrentText(choice)
+        # Script plot requests remain in the manifest for compatibility.
+        # Only user-created tabs are displayed, including after a rerun.
+        self.tabs.blockSignals(True)
+        try:
+            for index in range(self.tabs.count()-1, -1, -1):
+                panel = self.tabs.widget(index)
+                missing = [n for n in (panel.spec["x"], panel.spec["left"], panel.spec.get("right")) if n and n not in self.exp.plot_columns]
+                if missing:
+                    self.log.appendPlainText(f"Closed {panel.spec['title']}: channels unavailable in the new result: {', '.join(missing)}")
+                    self.close_tab(index)
+                else:
+                    panel.update_plot(self.exp, panel.spec)
+        finally:
+            self.tabs.blockSignals(False)
+        self.link_plots()
+        self.sync_axis_selectors()
+        self.update_plot_controls()
+        self.info.setPlainText(f"Records: {len(self.exp):,}\nOriginal IDs: {self.exp.record_ids[0]}–{self.exp.record_ids[-1]}\nRun: {manifest['run_id']}\nCalibrations: {len(manifest['calibrations'])}\nRegistry: {self.registry.root}")
+
+    def current_cell_index(self):
+        row = self.editor.textCursor().blockNumber()
+        return next((i for i, cell in enumerate(cells(self.editor.toPlainText())) if cell.start <= row < max(cell.end, cell.start+1)), 0)
+
+    def refresh_cells(self):
+        if not hasattr(self, "cell_list"):
+            return
+        source = self.editor.toPlainText()
+        parsed = cells(source)
+        previous = cells(self._executed_source)
+        changed = next((i for i in range(min(len(previous), len(parsed)))
+                        if previous[i].fingerprint != parsed[i].fingerprint), min(len(previous), len(parsed)))
+        self._updating_cells = True
+        self.cell_list.clear()
+        for i, cell in enumerate(parsed):
+            old = self._workspace_cells[i]["status"] if i < len(self._workspace_cells) else "pending"
+            status = old if i < changed else ("outdated" if old == "executed" else old)
+            self.cell_list.addItem(f"{i+1}. {cell.title} [{status}]")
+        self._updating_cells = False
+        self.follow_cell()
+        if hasattr(self, "cell_actions"):
+            self.workspace_busy(self.kernel.busy if self.kernel is not None else False)
+
+    def follow_cell(self):
+        if hasattr(self, "cell_list") and not self._updating_cells:
+            self._updating_cells = True
+            self.cell_list.setCurrentRow(self.current_cell_index())
+            self._updating_cells = False
+
+    def select_cell(self, index):
+        if self._updating_cells or index < 0:
+            return
+        parsed = cells(self.editor.toPlainText())
+        if index < len(parsed):
+            cursor = self.editor.textCursor()
+            cursor.setPosition(self.editor.document().findBlockByNumber(parsed[index].start).position())
+            self.editor.setTextCursor(cursor)
+            self.editor.setFocus()
+
+    def start_console(self):
+        if not self.script or self.process is not None:
+            return False
+        if legacy_source(self.editor.toPlainText()):
+            self.log.appendPlainText("Use Convert to cell script first. Your legacy script and Run all remain available.")
+            return False
+        if self.kernel is None:
+            try:
+                self.kernel = KernelController(self.console, self.script, self.registry.root, self)
+                self.kernel.state.connect(self.workspace_received)
+                self.kernel.output.connect(self.log.appendPlainText)
+                self.kernel.busyChanged.connect(self.workspace_busy)
+                self.kernel.readyChanged.connect(self.workspace_ready)
+                self.workspace_busy(True)
+                self.workspace_status.setText("Starting isolated IPython kernel in the current Python environment…")
+            except Exception as exc:
+                self.kernel = None
+                import traceback
+                self.log.appendPlainText("Cannot start IPython:\n"+traceback.format_exc())
+                self._pending_workspace_action = None
+                return False
+        self.console_dock.show()
+        self.console_dock.raise_()
+        return True
+
+    def workspace_ready(self, ready):
+        self.console._control.setReadOnly(not ready)
+        self.start_console_button.setEnabled(not ready)
+        if ready and self._pending_workspace_action:
+            action, source, index = self._pending_workspace_action
+            self._pending_workspace_action = None
+            self.kernel.action(action, source=source, index=index)
+        elif ready:
+            self.workspace_status.setText("IPython ready. Run cells to load your experiment.")
+
+    def workspace_busy(self, busy):
+        legacy = legacy_source(self.editor.toPlainText())
+        for title, action in getattr(self, "cell_actions", {}).items():
+            action.setEnabled(not busy and self.script is not None and
+                              (legacy if title == "Convert to cell script" else not legacy))
+        self.cell_shortcut.setEnabled(not busy and not legacy) if hasattr(self, "cell_shortcut") else None
+
+    def console_started(self, source):
+        self.workspace_status.setText("Console trial — add accepted commands to the script, then Run all to validate.")
+
+    def workspace_action(self, action):
+        self.editor.refresh_highlighting()
+        if not self.script or self.process is not None:
+            return
+        if self.kernel is not None and self.kernel.busy:
+            return
+        source = self.editor.toPlainText()
+        index = self.current_cell_index()
+        if not self.start_console():
+            return
+        if not self.kernel.ready:
+            self._pending_workspace_action = (action, source, index)
+        else:
+            self.kernel.action(action, source=source, index=index)
+
+    def run_cell(self):
+        self.workspace_action("cell")
+
+    def run_to_here(self):
+        self.workspace_action("through")
+
+    def restart_workspace(self):
+        if self.kernel is not None and self.kernel.busy:
+            return
+        self.shutdown_kernel()
+        self._executed_source = ""
+        self._workspace_cells = []
+        self.clear_interactive_display()
+        self.workspace_status.setText("Workspace restarted — variables and cell state cleared. Saved results remain on disk.")
+        self.refresh_cells()
+        self.start_console()
+
+    def shutdown_kernel(self):
+        self._pending_workspace_action = None
+        if self.kernel is not None:
+            self.kernel.close()
+            self.kernel.deleteLater()
+            self.kernel = None
+        if hasattr(self, "console"):
+            self.console._control.setReadOnly(True)
+            self.start_console_button.setEnabled(True)
+
+    def clear_interactive_display(self):
+        self.clear_tabs()
+        self.exp = None
+        self.channels.setRowCount(0)
+        self.info.clear()
+        for combo in self.selectors.values():
+            combo.clear()
+        self.update_plot_controls()
+
+    def workspace_received(self, state):
+        self.editor.refresh_highlighting()
+        self._executed_source = state["source"]
+        self._workspace_cells = state["cells"]
+        snap = state.get("snapshot")
+        if snap:
+            path = Path(snap["path"])
+            try:
+                exp = read_state(path, snap)
+                self.show_experiment(exp, {"run_id": "interactive", "calibrations": self.manifest.get("calibrations", {}) if self.manifest else {}})
+            except Exception as exc:
+                self.log.appendPlainText(f"Cannot display workspace snapshot: {exc}")
+            finally:
+                path.unlink(missing_ok=True)
+        elif state.get("empty") and not state.get("initial"):
+            self.clear_interactive_display()
+        if state.get("published"):
+            self.load_result()
+        if state.get("console_source"):
+            command = state["console_source"]
+            self.console_commands.addItem(command.replace("\n", " ")[:100], command)
+            self.console_commands.setCurrentIndex(self.console_commands.count()-1)
+            self.insert_command_button.setEnabled(True)
+        if state.get("error"):
+            text = "Failed/partial workspace — Run to here or restart. Last successful saved results remain on disk."
+            self.log.appendPlainText(state["error"])
+        elif state.get("dirty"):
+            text = "Console trials are not in the script — insert accepted commands, then Run all to validate."
+        elif state.get("published"):
+            text = "Validated: fresh Run all published the saved script and results."
+        elif state.get("halted"):
+            text = "Inspection stopped by stop(). Pick contacts, edit the script, and Run to here."
+        else:
+            text = "Interactive cell results — Run all to publish a fresh reproducible reduction."
+        if self.editor.toPlainText() != state["source"]:
+            text = "Script changed during execution — displayed results are outdated; Run all again."
+        self.workspace_status.setText(text)
+        self.statusBar().showMessage(text)
+        self.refresh_cells()
+        # Advance to the next cell after successful sequential execution.
+        index = state.get("completed", 0)
+        if not state.get("error") and not state.get("console_source") and not state.get("published") and index < self.cell_list.count():
+            self.select_cell(index)
+
+    def insert_console_command(self):
+        command = self.console_commands.currentData()
+        if command:
+            cursor = self.editor.textCursor()
+            # Insert at a statement boundary and leave the original cell intact.
+            cursor.movePosition(QtGui.QTextCursor.MoveOperation.EndOfBlock)
+            cursor.insertText("\n"+command.rstrip()+"\n")
+            self.editor.setTextCursor(cursor)
+            self.editor.setFocus()
+
+    def convert_script(self):
+        if not self.script or self.process is not None or (self.kernel is not None and self.kernel.busy):
+            return
+        try:
+            converted = convert_legacy(self.editor.toPlainText())
+            path = self.script.with_name(self.script.stem+"_cells.py")
+            number = 2
+            while path.exists():
+                path = self.script.with_name(self.script.stem+f"_cells_{number}.py")
+                number += 1
+            with path.open("x", encoding="utf-8") as stream:
+                stream.write(converted)
+            self.open_script(path)
+            self.log.appendPlainText(f"Created cell working copy: {path}\nThe original script was not overwritten. Relative raw paths are unchanged.")
+        except Exception as exc:
+            self.log.appendPlainText(f"Conversion refused: {exc}")
+
 
     def add_plot(self, spec):
         panel = PlotPanel(self.exp, spec)
@@ -507,6 +787,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.log.appendPlainText(str(exc))
 
     def closeEvent(self, event):
+        self.shutdown_kernel()
         if self.process:
             self.process.kill()
             self.process.waitForFinished(3000)

@@ -38,9 +38,12 @@ zero-based record IDs. `exp.slice(selection)` returns an independent aligned
 experiment retaining original IDs. Assign the sliced experiment to a variable
 and export it explicitly. Slicing does not renumber records.
 
-Every operation below adds a named output. Existing channels are never
-overwritten. Each call returns the same experiment, but separate readable lines
-are recommended for teaching.
+Original inputs remain protected. Working transformations can update a derived
+channel in place; omit output= or supply its current name. A different output name
+creates an intentional comparison branch. Every change appends a revision with
+input revisions to the JSON history and invalidates stale derived descendants.
+See [the update procedure](testing/CHANNEL_UPDATES_MAC.md) for supported methods
+and export defaults. Separate readable statements are recommended for teaching.
 
 | Method | Arguments and behaviour |
 |---|---|
@@ -133,3 +136,8 @@ do not alter reduced arrays or scientific parameters.
 See [the complete function reference](RAWPY_FUNCTIONS.md) for all public reduction
 operations, legacy reader mappings, units, examples and scientific conventions.
 The full working example is `examples/rawpy_mock/reduction.py`.
+
+## Top-level cell scripts
+
+See [Cell workspace](CELL_WORKSPACE.md) for the smaller load/calibration/save/stop
+vocabulary, cell execution and IPython trials. Legacy reduce(session) remains supported.

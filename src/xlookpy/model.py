@@ -103,20 +103,57 @@ class Experiment(AnalysisOperations):
         result.history = deepcopy(self.history) + [{"operation": "slice", "records": records.json()}]
         return result
 
+    @property
+    def export_columns(self):
+        """Current working values by default; original inputs stay plot-visible."""
+        working = tuple(n for n, c in self._channels.items() if c.metadata.get("role") == "derived")
+        return working or self.channels
+
     def _put(self, output, values, unit, operation):
         if not isinstance(output, str) or not output or output == "record_id" or any(c in output for c in "\t\r\n"):
             raise ValueError("Choose a nonempty output channel name without tabs/newlines (record_id is reserved).")
-        if output in self._channels:
-            raise ValueError(f"Channel {output!r} already exists. Choose a new output name or run the script from the beginning.")
+        previous = self._channels.get(output)
+        if previous is not None and previous.metadata.get("role") != "derived":
+            raise ValueError(f"Channel {output!r} already exists as an original input and is protected. Choose a working output name.")
         factor(unit, unit)
-        parent_names = [operation[k] for k in ("input", "force", "shear", "normal") if k in operation]
+        input_names = list(dict.fromkeys(operation[k] for k in
+            ("input", "force", "shear", "normal", "thickness", "x", "time") if k in operation))
+        inputs = {n: int(self[n].metadata.get("revision", 0)) for n in input_names}
+        revision = len(self.history)+1
         calibrated = operation["operation"] in ("calibrate", "convert_acquisition") or any(
-            self[name].metadata.get("sensor_calibrated", False) for name in parent_names)
-        c = Channel(values, unit, {"role": "derived", "sensor_calibrated": calibrated, **deepcopy(operation)})
+            self[n].metadata.get("sensor_calibrated", False) for n in input_names)
+        details = {**deepcopy(operation), "revision": revision, "input_revisions": inputs}
+        invalidated = {}
+        if previous is not None:
+            details["replaces_revision"] = int(previous.metadata.get("revision", 0))
+            changed = {output: details["replaces_revision"]}
+            while True:
+                children = {}
+                for name, channel in self._channels.items():
+                    if name == output or name in changed or channel.metadata.get("role") != "derived":
+                        continue
+                    dependencies = channel.metadata.get("input_revisions")
+                    if dependencies is None:  # Old saved state, before versioned inputs.
+                        stale = any(channel.metadata.get(k) in changed for k in
+                                    ("input", "force", "shear", "normal", "thickness", "x", "time"))
+                    else:
+                        stale = any(n in changed and changed[n] == r for n, r in dependencies.items())
+                    if stale:
+                        children[name] = int(channel.metadata.get("revision", 0))
+                if not children:
+                    break
+                changed.update(children)
+                invalidated.update(children)
+            details["invalidated_channels"] = invalidated
+        c = Channel(values, unit, {"role": "derived", "sensor_calibrated": calibrated, **details})
         if len(c.values) != len(self):
             raise ValueError("Operation output length differs from experiment length.")
+        # Mutate only after the entire new result has been validated.
+        for name in invalidated:
+            del self._channels[name]
         self._channels[output] = c
-        self.history.append({**deepcopy(operation), "output": output, "unit": unit,
+        # Never erase old operations: revisions distinguish repeated names.
+        self.history.append({**deepcopy(details), "output": output, "unit": unit,
                              "finite_samples": int(c.valid.sum()), "invalid_samples": int((~c.valid).sum())})
         return self
 
@@ -158,16 +195,18 @@ class Experiment(AnalysisOperations):
                          "calibration_id": using.id, "calibration_sha256": using.fingerprint,
                          "outside": outside, "outside_samples": count})
 
-    def convert(self, source, *, unit, output, scale=1.0):
-        """Convert compatible units and optionally invert a coordinate using scale=-1."""
+    def convert(self, source, *, unit, output=None, scale=1.0):
+        """Convert units/sign in place on a working channel; output= keeps a branch."""
+        output = source if output is None else output
         if not np.isfinite(scale) or scale == 0:
             raise ValueError("scale must be finite and nonzero.")
         c = self[source]
         return self._put(output, c.values * factor(c.unit, unit) * scale, unit,
                          {"operation": "convert", "input": source, "scale": float(scale)})
 
-    def zero(self, source, *, reference, output):
-        """Subtract the finite mean within an explicit reference interval; no clipping."""
+    def zero(self, source, *, reference, output=None):
+        """Subtract the reference mean; update the working input unless output is given."""
+        output = source if output is None else output
         c = self[source]
         good = self._selection(reference) & c.valid
         if not good.any():
@@ -176,12 +215,13 @@ class Experiment(AnalysisOperations):
         return self._put(output, c.values - offset, c.unit,
                          {"operation": "zero", "input": source, "reference": reference.json(), "offset": offset})
 
-    def zero_at(self, source, *, record, output):
+    def zero_at(self, source, *, record, output=None):
         """Set the picked contact sample to zero and force earlier samples to zero.
 
         At/after contact: output[i] = input[i] - input[contact]. Later negative
         values and NaNs are retained. Uses immutable original record IDs.
         """
+        output = source if output is None else output
         if isinstance(record, bool) or not isinstance(record, (int, np.integer)):
             raise ValueError("Contact record must be one integer original record ID, not a time or interval.")
         positions = np.flatnonzero(self.record_ids == record)
@@ -199,7 +239,8 @@ class Experiment(AnalysisOperations):
                          "before_contact": "forced_zero", "zeroed_before_samples": int(before.sum()),
                          "after_contact": "input_minus_contact_value; negative values and missing samples retained"})
 
-    def mask(self, source, *, records, output, reason):
+    def mask(self, source, *, records, output=None, reason):
+        output = source if output is None else output
         if not isinstance(reason, str) or not reason.strip():
             raise ValueError("Explain the reason for masking the interval.")
         c = self[source]
@@ -227,7 +268,7 @@ class Experiment(AnalysisOperations):
                          "normal": normal, "min_normal_MPa": float(min_normal_MPa),
                          "records": records.json() if records else None})
 
-    def correct_displacement(self, source, *, force, using, output, reference_record, sign=-1, outside="error", records=None):
+    def correct_displacement(self, source, *, force, using, output=None, reference_record, sign=-1, outside="error", records=None):
         """u_corrected = (u-u_ref) + sign * (e(F)-e(F_ref)).
 
         e(F) is the calibrated elastic deformation, in length units. sign=-1
@@ -235,6 +276,7 @@ class Experiment(AnalysisOperations):
         This reversible, single-valued model does not model apparatus hysteresis.
         With records= only that stage is corrected; other values become NaN.
         """
+        output = source if output is None else output
         r = using.record
         if r["category"] != "apparatus":
             raise ValueError("correct_displacement() needs an apparatus calibration e(F).")
