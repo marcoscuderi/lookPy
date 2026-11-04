@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "xlookpy"
-version = "0.3.1a1"
+version = "0.3.2a1"
 description = "Script-driven experimental reduction: first test implementation"
 requires-python = ">=3.10"
 dependencies = ["numpy>=1.24", "pint>=0.23", "nptdms>=1.7", "scipy>=1.10"]

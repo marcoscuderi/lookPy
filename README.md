@@ -132,3 +132,9 @@ a working copy of your current script, testing and returning to main.
 The [Mac update guide](docs/testing/CHANNEL_UPDATES_MAC.md) describes stable editor
 colouring, in-place working-channel updates, preserved revision history and
 reduced exports containing only current working values by default.
+
+## BigBiax calibrations
+
+Use the [BigBiax calibration guide](docs/BIGBIAX_CALIBRATIONS.md) to create your
+private JSON catalog, enter and inspect revisions, and apply nonlinear frame
+corrections while keeping displacement in µm. Start with `python -m xlookpy catalog init`.
