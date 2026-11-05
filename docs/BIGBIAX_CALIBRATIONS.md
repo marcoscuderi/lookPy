@@ -23,15 +23,19 @@ python -m xlookpy catalog list
 
 Default location: `~/.xlookpy/calibrations/BigBiax.json`.
 `init` preserves an existing catalog. The repository's `calibrations/BigBiax.json`
-is an **empty structure**, with no laboratory values. Populate the private catalog
-outside the application checkout, so updating Git cannot replace it.
+contains nine operator-supplied records: two load-cell calibrations, two main
+displacement calibrations, one AUX LVDT calibration, and separate loading/unloading
+deformation models for both rams. It is not installed or selected automatically.
+Keep experiment-specific additions outside the checkout so Git updates cannot
+replace them. To use the reviewed repository catalog explicitly, pass
+`--registry calibrations/BigBiax.json` when launching from the repository root.
 
 For a different location, add `--file "/path/to/BigBiax.json"` to catalog commands.
 Launch the reduction with `--registry "/path/to/BigBiax.json"` (both GUI and CLI).
 `XLOOKPY_CALIBRATIONS` may also name that file or a registry directory. Existing
 individual-record registries remain supported.
 
-The JSON has four principal fields:
+The JSON structure is shown below with an empty records list for illustration:
 
 ```json
 {
@@ -51,7 +55,7 @@ saving. Each record retains its own coefficients, units and validity range.
 
 | Purpose | Category | Typical input → output | How used |
 |---|---|---|---|
-| `acquisition` | `sensor` | V → kN or µm | Archive the conversion recorded in TDMS; the profile uses the TDMS itself |
+| `acquisition` | `sensor` | V → kN or µm | Archive TDMS conversions or explicitly select a stable sensor calibration; the profile itself uses TDMS properties |
 | `auxiliary` | `sensor` | V → sensor engineering units | Explicit `exp.calibrate()` |
 | `elastic` | `apparatus` | kN → µm | Explicit `exp.correct_displacement()` |
 
@@ -182,9 +186,10 @@ coefficients as deformation coefficients. This implementation accepts linear or
 polynomial **deformation** models; it does not accept arbitrary stiffness curves.
 
 The force input must represent the force used in the calibration, with a
-consistent physical zero. Correction is relative to contact, so a constant
-intercept cancels. Use `sign=1` only if your displacement coordinate requires
-adding apparatus deformation instead of subtracting it.
+consistent physical zero. A constant additive term in the deformation model
+e(F) cancels in e(F)-e(F_reference). An offset in the input force generally does
+not cancel for nonlinear e(F). Use `sign=1` only if your displacement coordinate
+requires adding apparatus deformation instead of subtracting it.
 
 By default out-of-range force raises an error; there is no silent 2–162 kN
 clipping. If the initial unloaded records fall outside the calibration, select
@@ -247,9 +252,76 @@ python -m xlookpy run "/path/to/experiment/reduction.py" \
 
 Start with contact inspection, confirm a known force/displacement conversion,
 then add the actual frame revisions and check corrected displacement. Nothing
-in the empty catalog activates a correction automatically.
+in the catalog activates a correction automatically.
 
-## 7. Practical guide: enter and use linear and polynomial calibrations
+## 7. Reviewed BigBiax catalog: load slopes and experiment baselines
+
+The two published load-cell entries use these stable coefficients:
+
+| Record ID | Slope (kN/V) | Catalog intercept (kN) |
+|---|---:|---:|
+| `BigBiax/frame/vertical/load/62_mm_LC` | 23.203 | 0 |
+| `BigBiax/frame/horizontal/load/62_mm_LC` | 25.708 | 0 |
+
+Electrical offsets are experiment-specific. Measure an actually unloaded
+reference interval for each axis and compute `F = slope * (V - V0)`. Do not
+remove a real contact preload from the force supplied to the apparatus model.
+One reference corrects a constant baseline, not drift throughout a run.
+The original imported load coefficients are retained as historical evidence in
+`provenance.source_tdms_parameters`; they are not active intercepts.
+
+The BigBiax profile still applies each TDMS header's coefficients by default.
+To explicitly replace its working load channels using the catalog, insert
+these operations immediately after loading, before contact zeroing or frame
+correction. Set the four baseline record IDs to real unloaded intervals:
+
+```python
+# exp = load(RAW_FILE, profile="BigBiax") has already run.
+exp.calibrate(
+    "ADC/Vertical Load",
+    using=calibration("BigBiax/frame/vertical/load/62_mm_LC"),
+    output="vertical_load",
+)
+exp.zero("vertical_load", reference=exp.records(V_BASE_START, V_BASE_END))
+
+exp.calibrate(
+    "ADC/Horizontal Load",
+    using=calibration("BigBiax/frame/horizontal/load/62_mm_LC"),
+    output="horizontal_load",
+)
+exp.zero("horizontal_load", reference=exp.records(H_BASE_START, H_BASE_END))
+```
+
+`zero` subtracts the mean of the selected unloaded interval from the whole
+working force channel; it does not flatten any segment. With zero catalog
+intercept this is algebraically `slope * (V - mean(V_unloaded))`. Raw ADC
+channels remain intact, and both calibration selection and baseline operation
+are recorded in history. Calibration always starts from ADC voltages, so the
+profile's earlier force conversion is replaced rather than calibrated twice.
+If you need a separately contact-zeroed force for display, retain the physical
+force for apparatus correction and give the display channel another name.
+Saving the experiment retains the selected calibration snapshot and baseline
+interval/offset in the reduction history. Changing this JSON alone does not
+change an existing reduction script's execution.
+
+The operator-confirmed sensor input ranges remain `[0, 200]` **V**, including
+the AUX entry. These are input limits, not force/displacement limits.
+
+| Axis | Published branch models | Valid physical force | Displacement origin |
+|---|---|---|---|
+| Horizontal | `BigBiax/frame/horizontal/2026-07-16/loading/r1` and `unloading/r1` | 10–150 kN | e(10 kN) = 0 |
+| Vertical | `BigBiax/frame/vertical/2026-07-16/loading/r1` and `unloading/r1` | 20–150 kN | e(20 kN) = 0 |
+
+For unloading replace the final `loading/r1` path segments with `unloading/r1`.
+Use an in-range frame reference and correction interval; an unloaded contact
+record is outside these particular models. Branch origins are independent;
+these polynomials are not an automatic hysteresis-switching model. Their
+historical TDMS force intercepts remain in provenance to reproduce the fits.
+Matching the physical unloaded force reference matters; matching historical
+electrical intercept numbers between experiments is not required. Fixture
+configuration and sensor/gain suitability still need to match the reduction.
+
+## 8. Practical guide: enter and use linear and polynomial calibrations
 
 This walkthrough combines complete JSON examples with the terminal answers that
 create them. **All numerical values below are illustrative, not measured BigBiax
