@@ -41,8 +41,10 @@ The embedded editor still supports Python colouring, font-size controls and
 dark/light themes. Click curves to copy original row IDs and two-point intervals.
 
 The included raw.csv and calibration_examples are explicitly synthetic fixtures.
-They are not calibration values for the apparatus. No real TDMS experiments or
-measured calibration registry is included in this public repository.
+They are not calibration values for the apparatus. The operator-reviewed
+`calibrations/BigBiax.json` contains the published laboratory calibration catalog;
+see the [calibration guide](docs/BIGBIAX_CALIBRATIONS.md) for baseline handling,
+configuration checks and explicit selection. Real TDMS experiments are not included.
 
 ## Standard experiment reduction
 
@@ -78,7 +80,8 @@ first successful Linux/macOS CI run; published tags are never moved.
 - main contains accepted changes; future work uses a separate branch and PR.
 - Automated tests and operator acceptance precede merging.
 - Numerical algorithms remain separate from the GUI.
-- Real calibration records and experiment directories stay outside this repo.
+- Experiment directories and private calibration additions stay outside this repo;
+  the operator-approved BigBiax catalog is versioned explicitly.
 - Changes and releases are recorded in [CHANGELOG.md](CHANGELOG.md).
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). Branch protection is a repository-owner
@@ -132,3 +135,9 @@ a working copy of your current script, testing and returning to main.
 The [Mac update guide](docs/testing/CHANNEL_UPDATES_MAC.md) describes stable editor
 colouring, in-place working-channel updates, preserved revision history and
 reduced exports containing only current working values by default.
+
+## BigBiax calibrations
+
+Use the [BigBiax calibration guide](docs/BIGBIAX_CALIBRATIONS.md) to create your
+private JSON catalog, enter and inspect revisions, and apply nonlinear frame
+corrections while keeping displacement in µm. Start with `python -m xlookpy catalog init`.
