@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Fit an interval interactively by clicking two points on a plotted curve.
+  Choose a linear or higher-degree polynomial and inspect the fit overlay
+  and coefficients in the execution log.
+
 ## 0.3.1a1 — highlighting and working-channel updates
 
 - Refresh token spans from current source and reset complete display formats;
@@ -31,8 +37,6 @@
 - Add deterministic mock experiment, complete function reference and Mac test guide.
 - Add SciPy dependency and record its version in manifests.
 - Keep accepted embedded editor, contact zero and manual plotting behaviour.
-
-## Unreleased
 
 ## 0.1.3a1 — manual plotting (under operator review)
 

@@ -37,6 +37,14 @@ LEFT and optional RIGHT channels, then click **New plot tab**. Change channels
 and click **Refresh axes** to update the active plot without creating another
 tab. Use `record_id` as an axis to inspect original row number against time.
 
+Choose a **Fit degree** (1 for a slope, 2–6 for a polynomial), click **Fit
+interval**, then click two points on the curve of interest. The fit uses all
+finite X/Y pairs between those original records, inclusive. The plot draws the
+fit on the curve's Y axis. The execution log shows the interval, sample count,
+fit quality and coefficients, including the slope and its units for degree 1.
+Each new fit replaces the previous overlay in that tab. **Clear fit** removes
+it. Use the reduction script's `exp.fit()` for fits you want to save and replay.
+
 The embedded editor still supports Python colouring, font-size controls and
 dark/light themes. Click curves to copy original row IDs and two-point intervals.
 
