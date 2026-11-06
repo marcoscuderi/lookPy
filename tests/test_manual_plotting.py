@@ -8,6 +8,7 @@ import pytest
 pytest.importorskip("PySide6")
 pytest.importorskip("pyqtgraph")
 from PySide6 import QtCore, QtWidgets
+from PySide6.QtTest import QTest
 from xlookpy import Experiment, Channel, run
 from xlookpy.gui import MainWindow, PlotPanel
 from xlookpy.io import write_dat
@@ -164,4 +165,71 @@ def test_refresh_new_plot_controls_disabled_before_reduction(app):
     window.new_plot()
     window.refresh_plot()
     assert window.tabs.count() == 0
+    window.close()
+
+
+def test_interactive_fit_uses_original_record_interval_and_selected_axis(app):
+    x = np.array([-2., 0., 4., 2., 3., 1., 6.])
+    right = 2*x**2 + 3*x + 4
+    right[[0, 3, 6]] = [500., np.nan, 200.]
+    exp = Experiment({
+        "time": Channel(x, "s", {}),
+        "force": Channel(3*x + 2, "kN", {}),
+        "slip": Channel(right, "um", {}),
+    }, record_ids=np.arange(20, 27))
+    window = MainWindow()
+    window.exp = exp
+    panel = window.add_plot({"x": "time", "left": "force", "right": "slip", "title": "Fit test"})
+    window.show()
+    app.processEvents()
+
+    def click(axis, y, index):
+        point = axis.mapViewToScene(QtCore.QPointF(x[index], y[index]))
+        QTest.mouseClick(panel.plot.viewport(), QtCore.Qt.MouseButton.LeftButton,
+                         pos=panel.plot.mapFromScene(point))
+
+    panel.fit_degree.setCurrentIndex(panel.fit_degree.findData(2))
+    panel.fit_button.click()
+    click(panel.secondary, right, 5)
+    click(panel.secondary, right, 1)
+    axis, overlay = panel.fit_overlay
+    assert axis is panel.secondary
+    xx, yy = overlay.getData()
+    np.testing.assert_allclose(xx[[0, -1]], [0., 4.])
+    np.testing.assert_allclose(yy, 2*xx**2 + 3*xx + 4, atol=1e-10)
+    assert "records 21–25" in window.log.toPlainText()
+    assert "4 samples, R² = 1" in window.log.toPlainText()
+    assert "a0 = 4, a1 = 3, a2 = 2" in window.log.toPlainText()
+    assert not panel.fit_button.isChecked()
+    assert panel.last_picks == []
+
+    panel.fit_degree.setCurrentIndex(panel.fit_degree.findData(1))
+    panel.fit_button.click()
+    click(panel.primary.vb, exp["force"].values, 1)
+    click(panel.primary.vb, exp["force"].values, 4)
+    assert panel.fit_overlay[0] is panel.primary.vb
+    assert "Slope = 3 kN/s, intercept = 2 kN" in window.log.toPlainText()
+    assert exp.channels == ("time", "force", "slip")
+    assert exp.history == []
+
+    panel.fit_button.click()
+    click(panel.primary.vb, exp["force"].values, 1)
+    click(panel.primary.vb, exp["force"].values, 1)
+    assert "Fit refused for records 21–21" in window.log.toPlainText()
+    assert panel.fit_overlay is not None
+    panel.update_plot(exp, {"x": "record_id", "left": "force"})
+    assert panel.fit_overlay is None
+    assert panel.fit_start is None
+    assert not panel.clear_fit_button.isEnabled()
+
+    zero = np.zeros_like(x)
+    flat = Experiment({"time": exp["time"], "force": Channel(zero, "kN", {})})
+    panel.update_plot(flat, {"x": "time", "left": "force"})
+    app.processEvents()
+    panel.fit_button.click()
+    click(panel.primary.vb, zero, 1)
+    click(panel.primary.vb, zero, 4)
+    assert "Slope = 0 kN/s, intercept = 0 kN" in window.log.toPlainText()
+    panel.clear_fit_button.click()
+    assert panel.fit_overlay is None
     window.close()

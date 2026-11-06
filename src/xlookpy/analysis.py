@@ -13,6 +13,34 @@ def _integer(value, name, minimum=1):
     return int(value)
 
 
+def fit_polynomial(xx, yy, degree, *, x_unit, y_unit):
+    """Fit paired finite samples and return the scaled polynomial and diagnostics."""
+    from numpy.polynomial import Polynomial
+
+    if len(xx) <= degree or np.unique(xx).size <= degree:
+        raise ValueError("Fit needs more finite samples and distinct x values than the polynomial degree.")
+    if degree == 0:
+        poly = Polynomial([float(np.mean(yy))])
+    else:
+        poly, stats = Polynomial.fit(xx, yy, degree, full=True)
+        if stats[1] < degree+1:
+            raise ValueError("Polynomial fit is rank deficient; reduce degree or change the interval.")
+    predicted = poly(xx)
+    residual = yy-predicted
+    sse = float(residual@residual)
+    total = float(np.sum((yy-np.mean(yy))**2))
+    result = {"coefficients": poly.convert().coef.tolist(), "coefficient_order": "ascending",
+              "normalized_coefficients": poly.coef.tolist(), "domain": poly.domain.tolist(),
+              "window": poly.window.tolist(), "degree": degree, "n_points": int(len(xx)),
+              "rmse": float(np.sqrt(sse/len(xx))), "r_squared": 1-sse/total if total > 0 else None,
+              "x_unit": x_unit, "y_unit": y_unit,
+              "coefficient_units": [f"({y_unit})/({x_unit})**{j}" for j in range(degree+1)]}
+    result = json_value(result)
+    if result["coefficients"] is None or any(v is None for v in result["coefficients"]):
+        raise ValueError("Fit coefficients overflow; re-reference x or reduce degree.")
+    return poly, result
+
+
 class AnalysisOperations:
     def _position(self, record):
         _integer(record, "record", 0)
@@ -158,32 +186,12 @@ class AnalysisOperations:
         Ascending coefficients use the original x coordinate. Evaluation uses a
         centered/scaled Polynomial for stability. Output outside selection is NaN.
         """
-        from numpy.polynomial import Polynomial
         degree = _integer(degree, "degree", 0)
         xx, yy = self[x].values, self[y].values
         active = self._selection(records)
         good = active & np.isfinite(xx) & np.isfinite(yy)
-        if good.sum() <= degree or np.unique(xx[good]).size <= degree:
-            raise ValueError("Fit needs more finite samples and distinct x values than the polynomial degree.")
-        if degree == 0:
-            poly = Polynomial([float(np.mean(yy[good]))])
-        else:
-            poly, stats = Polynomial.fit(xx[good], yy[good], degree, full=True)
-            if stats[1] < degree+1:
-                raise ValueError("Polynomial fit is rank deficient; reduce degree or change the interval.")
-        predicted = poly(xx[good])
-        residual = yy[good]-predicted
-        sse = float(residual@residual)
-        total = float(np.sum((yy[good]-np.mean(yy[good]))**2))
-        result = {"coefficients": poly.convert().coef.tolist(), "coefficient_order": "ascending",
-                  "normalized_coefficients": poly.coef.tolist(), "domain": poly.domain.tolist(),
-                  "window": poly.window.tolist(), "degree": degree, "n_points": int(good.sum()),
-                  "rmse": float(np.sqrt(sse/good.sum())), "r_squared": 1-sse/total if total > 0 else None,
-                  "x_unit": self[x].unit, "y_unit": self[y].unit,
-                  "coefficient_units": [f"({self[y].unit})/({self[x].unit})**{j}" for j in range(degree+1)]}
-        result = json_value(result)
-        if result["coefficients"] is None or any(v is None for v in result["coefficients"]):
-            raise ValueError("Fit coefficients overflow; re-reference x or reduce degree.")
+        poly, result = fit_polynomial(
+            xx[good], yy[good], degree, x_unit=self[x].unit, y_unit=self[y].unit)
         fitted = np.full(len(self), np.nan)
         fitted[active & np.isfinite(xx)] = poly(xx[active & np.isfinite(xx)])
         self._put(output, fitted, self[y].unit, {"operation": "fit", "input": y, "x": x,
