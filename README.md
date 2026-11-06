@@ -2,9 +2,9 @@
 
 Script-driven experimental reduction, inspired by Xlook's interactive workflow.
 
-**Trial branch: 0.1.3a1 — manual plot tabs and original-row axes.**
-The approved main/tag baseline remains 0.1.1a1 until this change is accepted.
-The embedded Monokai editor and contact-onset zeroing are retained.
+The `main` branch includes the embedded Monokai editor, contact-onset zeroing,
+manual plot tabs with original record IDs, rawPy-style reduction operations,
+and a shared cell and IPython workspace.
 The repository is named lookPy; the Python package and launch command remain
 `xlookpy`, so existing reduction scripts continue to work.
 
@@ -70,8 +70,8 @@ python -m xlookpy gui
 Preserve any local edits before switching/updating. Reinstall with
 `python -m pip install -e ".[gui]"` when dependency/package metadata changes.
 See [the Git workflow guide](docs/VERSION_CONTROL.md) for testing branches and
-returning to an exact release. The baseline tag v0.1.1a1 is created after the
-first successful Linux/macOS CI run; published tags are never moved.
+returning to an exact release. The baseline release is tagged `v0.1.1a1`.
+See the [release history](https://github.com/marcoscuderi/lookPy/releases).
 
 ## Development policy
 
@@ -92,14 +92,14 @@ python -m pip install -e ".[gui,test]"
 python -m pytest -q
 ```
 
-GitHub Actions runs the 26-test feature suite on Linux and macOS with Qt
+GitHub Actions runs the test suite on Linux and macOS with Qt
 offscreen. Offscreen tests do not certify native desktop behaviour or approve
 scientific reference/calibration choices. The application remains an early
 working foundation, not a complete Xlook port.
 
 ## Documentation
 
-- [Exact Mac branch-testing and rollback procedure](docs/testing/MANUAL_PLOT_TABS_MAC.md)
+- [Historical Mac test procedure for manual plot tabs](docs/testing/MANUAL_PLOT_TABS_MAC.md)
 
 - [Operator guide](docs/OPERATOR_GUIDE.md)
 - [Contact-zero workflow](CONTACT_ZERO_UPDATE.md)
@@ -111,24 +111,24 @@ working foundation, not a complete Xlook port.
 - [Validation and limitations](VALIDATION.md)
 
 Rate-and-state forward/inverse modelling, advanced catalogues and additional
-Xlook compatibility remain future work. Cell execution and IPython are available
-on the workspace test branch described below.
+Xlook compatibility remain future work.
 
-## rawPy-style mock analysis (0.2.0a1 test branch)
+## rawPy-style mock analysis
 
-Start with the [Mac test procedure](docs/testing/RAWPY_ANALYSIS_MAC.md),
-[complete function reference](docs/RAWPY_FUNCTIONS.md), and
-[worked reduction](examples/rawpy_mock/reduction.py).
+Start with the [function reference](docs/RAWPY_FUNCTIONS.md) and
+[worked reduction](examples/rawpy_mock/reduction.py). The
+[historical Mac test procedure](docs/testing/RAWPY_ANALYSIS_MAC.md) records
+the original branch validation.
 All mock constants are synthetic; no real experiment data are included.
 
-## Interactive cell workspace (0.3.0a1 test branch)
+## Interactive cell workspace
 
 Use your real experiment with [cell execution and IPython](docs/CELL_WORKSPACE.md).
-The [Mac procedure](docs/testing/CELL_WORKSPACE_MAC.md) covers updating, converting
-a working copy of your current script, testing and returning to main.
+The guide covers running cells, trying commands in the console, and publishing
+a reproducible reduction with Run all.
 
-## Highlighting and compact channels (0.3.1a1)
+## Highlighting and working channels
 
-The [Mac update guide](docs/testing/CHANNEL_UPDATES_MAC.md) describes stable editor
-colouring, in-place working-channel updates, preserved revision history and
-reduced exports containing only current working values by default.
+The [channel updates guide](docs/testing/CHANNEL_UPDATES_MAC.md) describes
+editor colouring, in-place updates, and revision history. Reduced exports
+include current working values by default.
