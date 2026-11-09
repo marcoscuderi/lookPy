@@ -53,13 +53,17 @@ def test_real_kernel_cells_console_invalidation_and_fresh_publication(app, tmp_p
     path, source = script(tmp_path)
     window = MainWindow(path, tmp_path/"registry")
     window.show()
+    app.processEvents()
     try:
+        assert not window.log.visibleRegion().isEmpty()
         window.select_cell(2)
         window.run_to_here()
         assert window.kernel is not None, window.log.toPlainText()
         wait_until(app, lambda: window.exp is not None and "v" in window.exp.channels)
         wait_until(app, lambda: not window.kernel.busy)
         assert window.kernel.ready
+        assert not window.log.visibleRegion().isEmpty()
+        assert window.console_dock.visibleRegion().isEmpty()
         np.testing.assert_array_equal(window.exp["slip"].values, [0, 0, 1, 2, 3])
         assert not (tmp_path/"experiment.json").exists()
         assert window.tabs.count() == 0
@@ -67,6 +71,9 @@ def test_real_kernel_cells_console_invalidation_and_fresh_publication(app, tmp_p
         assert window.tabs.count() == 1
 
         # A real QtConsole command operates on the same experiment as the cells.
+        window.console_dock.raise_()
+        app.processEvents()
+        assert not window.console_dock.visibleRegion().isEmpty()
         window.console.execute('exp.zero_at("d", record=2, output="slip")')
         wait_until(app, lambda: window.exp is not None and "v" not in window.exp.channels)
         wait_until(app, lambda: not window.kernel.busy)

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Show or hide workspace panels from **View → Panels**. Detached panels on
+  macOS can sit behind the main window.
+- Cell runs preserve the selected workspace panel. IPython controls stack
+  vertically in side docks so the plot can use more of the window.
 - Fit an interval interactively by clicking two points on a plotted curve.
   Choose a linear or higher-degree polynomial and inspect the fit overlay
   and coefficients in the execution log.

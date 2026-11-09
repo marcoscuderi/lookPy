@@ -311,6 +311,31 @@ class PlotPanel(QtWidgets.QWidget):
         self.picked.emit("Copied "+text)
 
 
+class WorkspaceDock(QtWidgets.QDockWidget):
+    def __init__(self, title, parent):
+        super().__init__(title, parent)
+        if sys.platform == "darwin":
+            self._window_timer = QtCore.QTimer(self, interval=50, singleShot=True)
+            self._window_timer.timeout.connect(self._use_normal_window)
+            self.topLevelChanged.connect(lambda _: self._window_timer.start())
+
+    def _use_normal_window(self):
+        if not self.isFloating() or self.windowType() != QtCore.Qt.WindowType.Tool:
+            return
+        # Qt uses a tool window for floating docks. Wait until its drag has
+        # finished before replacing the flags, which hides the native window.
+        if QtWidgets.QApplication.mouseButtons() & QtCore.Qt.MouseButton.LeftButton:
+            self._window_timer.start()
+            return
+        flags = self.windowFlags() & ~QtCore.Qt.WindowType.WindowType_Mask
+        position = self.pos()
+        visible = not self.isHidden()
+        self.setWindowFlags(flags | QtCore.Qt.WindowType.Window)
+        self.move(position)
+        if visible:
+            self.show()
+
+
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self, script=None, registry=None):
         super().__init__()
@@ -340,6 +365,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self._plot_count = 0
         self.editor = CodeEditor()
         self.editor.sourceChanged.connect(self.edited)
+        self.panels_menu = self.menuBar().addMenu("&View").addMenu("&Panels")
         self.log = QtWidgets.QPlainTextEdit()
         self.log.setReadOnly(True)
         self.info = QtWidgets.QPlainTextEdit()
@@ -385,12 +411,14 @@ class MainWindow(QtWidgets.QMainWindow):
         bottom_dock = self.add_dock("Execution log and picked points", self.log, QtCore.Qt.DockWidgetArea.BottomDockWidgetArea)
         console_panel = QtWidgets.QWidget()
         console_layout = QtWidgets.QVBoxLayout(console_panel)
-        console_controls = QtWidgets.QHBoxLayout()
+        console_controls = QtWidgets.QBoxLayout(QtWidgets.QBoxLayout.Direction.LeftToRight)
         self.start_console_button = QtWidgets.QPushButton("Start IPython")
         self.start_console_button.clicked.connect(self.start_console)
         console_controls.addWidget(self.start_console_button)
         self.console_commands = QtWidgets.QComboBox()
-        self.console_commands.setMinimumContentsLength(24)
+        self.console_commands.setSizeAdjustPolicy(
+            QtWidgets.QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+        self.console_commands.setMinimumContentsLength(8)
         console_controls.addWidget(self.console_commands, 1)
         self.insert_command_button = QtWidgets.QPushButton("Insert command into script")
         self.insert_command_button.setToolTip("Insert the chosen submitted command at the editor cursor, without executing it.")
@@ -404,6 +432,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.console.executing.connect(self.console_started)
         console_layout.addWidget(self.console)
         self.console_dock = self.add_dock("IPython workspace", console_panel, QtCore.Qt.DockWidgetArea.BottomDockWidgetArea)
+        self.console_dock.dockLocationChanged.connect(
+            lambda area: console_controls.setDirection(
+                QtWidgets.QBoxLayout.Direction.TopToBottom if area in (
+                    QtCore.Qt.DockWidgetArea.LeftDockWidgetArea,
+                    QtCore.Qt.DockWidgetArea.RightDockWidgetArea,
+                ) else QtWidgets.QBoxLayout.Direction.LeftToRight))
         self.tabifyDockWidget(bottom_dock, self.console_dock)
         bottom_dock.raise_()
         self.resizeDocks([left_dock, right_dock], [280, 480], QtCore.Qt.Orientation.Horizontal)
@@ -433,9 +467,12 @@ class MainWindow(QtWidgets.QMainWindow):
             self.open_script(Path(script))
 
     def add_dock(self, title, widget, area):
-        dock = QtWidgets.QDockWidget(title, self)
+        dock = WorkspaceDock(title, self)
         dock.setWidget(widget)
         self.addDockWidget(area, dock)
+        action = dock.toggleViewAction()
+        action.triggered.connect(lambda shown: dock.raise_() if shown else None)
+        self.panels_menu.addAction(action)
         return dock
 
     def close_tab(self, index):
@@ -644,6 +681,11 @@ class MainWindow(QtWidgets.QMainWindow):
             self.editor.setFocus()
 
     def start_console(self):
+        if self.ensure_kernel():
+            self.console_dock.show()
+            self.console_dock.raise_()
+
+    def ensure_kernel(self):
         if not self.script or self.process is not None:
             return False
         if legacy_source(self.editor.toPlainText()):
@@ -664,8 +706,6 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.log.appendPlainText("Cannot start IPython:\n"+traceback.format_exc())
                 self._pending_workspace_action = None
                 return False
-        self.console_dock.show()
-        self.console_dock.raise_()
         return True
 
     def workspace_ready(self, ready):
@@ -696,7 +736,7 @@ class MainWindow(QtWidgets.QMainWindow):
             return
         source = self.editor.toPlainText()
         index = self.current_cell_index()
-        if not self.start_console():
+        if not self.ensure_kernel():
             return
         if not self.kernel.ready:
             self._pending_workspace_action = (action, source, index)
@@ -718,7 +758,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.clear_interactive_display()
         self.workspace_status.setText("Workspace restarted — variables and cell state cleared. Saved results remain on disk.")
         self.refresh_cells()
-        self.start_console()
+        self.ensure_kernel()
 
     def shutdown_kernel(self):
         self._pending_workspace_action = None
@@ -897,6 +937,9 @@ class MainWindow(QtWidgets.QMainWindow):
         if self.process:
             self.process.kill()
             self.process.waitForFinished(3000)
+        for dock in self.findChildren(WorkspaceDock):
+            if dock.isFloating():
+                dock.close()
         super().closeEvent(event)
 
 
