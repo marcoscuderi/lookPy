@@ -304,8 +304,9 @@ Saving the experiment retains the selected calibration snapshot and baseline
 interval/offset in the reduction history. Changing this JSON alone does not
 change an existing reduction script's execution.
 
-The operator-confirmed sensor input ranges remain `[0, 200]` **V**, including
-the AUX entry. These are input limits, not force/displacement limits.
+The catalog sets the input range to `[-150, 200]` **V** for both 62 mm load
+cells and `[0, 200]` **V** for the displacement and AUX sensors. The bounds
+apply to the input voltage before conversion to force or displacement.
 
 | Axis | Published branch models | Valid physical force | Displacement origin |
 |---|---|---|---|

@@ -30,7 +30,7 @@
         }
       },
       "valid_range": [
-        0.0,
+        -150.0,
         200.0
       ],
       "notes": "this is a real calibration but I am using as try Stable slope-only load calibration; catalog intercept is zero by operator decision on 2026-11-05. Measure and subtract an unloaded baseline separately for each experiment before apparatus correction; do not remove a real preload. The original experiment-specific TDMS coefficients are retained in provenance.source_tdms_parameters.",
@@ -68,7 +68,7 @@
         }
       },
       "valid_range": [
-        0.0,
+        -150.0,
         200.0
       ],
       "notes": "calibration taken from the latest experiments Stable slope-only load calibration; catalog intercept is zero by operator decision on 2026-11-05. Measure and subtract an unloaded baseline separately for each experiment before apparatus correction; do not remove a real preload. The original experiment-specific TDMS coefficients are retained in provenance.source_tdms_parameters.",
