@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add a step-by-step BigBiax reduction example with separate inspection,
+  calibration, stress, frame correction, and analysis cells.
 - Show or hide workspace panels from **View → Panels**. Detached panels on
   macOS can sit behind the main window.
 - Cell runs preserve the selected workspace panel. IPython controls stack

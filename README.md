@@ -56,6 +56,15 @@ configuration checks and explicit selection. Real TDMS experiments are not inclu
 
 ## Standard experiment reduction
 
+For BigBiax, copy the [step-by-step reduction template](examples/bigbiax/reduction_step_by_step.py)
+into your experiment directory. Set `RAW_FILE` and select the reviewed
+`calibrations/BigBiax.json` from your checkout in cell 3 or when launching lookPy.
+Run through cell 4a to inspect the ADC signals, enter the picked record IDs in
+cell 4b, and review the remaining stages one cell at a time. Use **Run all**
+after review to write the final results and experiment manifest.
+
+### Acquisition-profile example
+
 Use `examples/your_experiment/reduction.py` in your experiment directory. Set
 RAW_FILE to the input TDMS. With contact records set to None, run to inspect the
 original physical signals. Pick the contact onset for each ram and enter those
