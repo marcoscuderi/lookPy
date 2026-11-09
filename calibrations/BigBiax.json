@@ -1,0 +1,770 @@
+{
+  "schema_version": 1,
+  "apparatus": "BigBiax",
+  "description": "BigBiax sensor and apparatus calibration catalog. Load-cell records store stable slopes with zero intercept; per-experiment unloaded baseline correction is required. Exact apparatus revision and branch selection remain explicit.",
+  "records": [
+    {
+      "schema_version": 1,
+      "apparatus": "BigBiax",
+      "purpose": "acquisition",
+      "id": "BigBiax/frame/vertical/load/62_mm_LC",
+      "category": "sensor",
+      "sensor": "vertical load",
+      "configuration": "standard rack",
+      "date": "2026-11-04",
+      "source": "/Users/marcoscuderi/Library/CloudStorage/GoogleDrive-marco.scuderi@uniroma1.it/My Drive/Experiments/bigBiax/04_Experiments/r0082/r0082s05min40_20_aux6_fixed.tdms",
+      "input_unit": "V",
+      "output_unit": "kN",
+      "model": "linear",
+      "gain": "low",
+      "parameters": {
+        "slope": 23.203,
+        "intercept": 0.0
+      },
+      "provenance": {
+        "tdms_sha256": "3e902a822407921dadbcbd1e6f81117d20c12dc786ac06994091eead3e3bdf2e",
+        "channel": "ADC/Vertical Load",
+        "source_tdms_parameters": {
+          "slope": 23.203,
+          "intercept": -3.65361516869354
+        }
+      },
+      "valid_range": [
+        0.0,
+        200.0
+      ],
+      "notes": "this is a real calibration but I am using as try Stable slope-only load calibration; catalog intercept is zero by operator decision on 2026-11-05. Measure and subtract an unloaded baseline separately for each experiment before apparatus correction; do not remove a real preload. The original experiment-specific TDMS coefficients are retained in provenance.source_tdms_parameters.",
+      "baseline_policy": {
+        "method": "subtract_unloaded_reference",
+        "equation": "F_kN = slope_kN_per_V * (V - V0)",
+        "reference": "Experiment-specific unloaded interval; record selection and baseline in reduction history.",
+        "constant_offset_only": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "apparatus": "BigBiax",
+      "purpose": "acquisition",
+      "id": "BigBiax/frame/horizontal/load/62_mm_LC",
+      "category": "sensor",
+      "sensor": "horizontal load",
+      "configuration": "standard rack",
+      "date": "2026-11-04",
+      "source": "/Users/marcoscuderi/Library/CloudStorage/GoogleDrive-marco.scuderi@uniroma1.it/My Drive/Experiments/bigBiax/04_Experiments/r0082/r0082s05min40_20_aux6_fixed.tdms",
+      "input_unit": "V",
+      "output_unit": "kN",
+      "model": "linear",
+      "gain": "high",
+      "parameters": {
+        "slope": 25.708,
+        "intercept": 0.0
+      },
+      "provenance": {
+        "tdms_sha256": "3e902a822407921dadbcbd1e6f81117d20c12dc786ac06994091eead3e3bdf2e",
+        "channel": "ADC/Horizontal Load",
+        "source_tdms_parameters": {
+          "slope": 25.708,
+          "intercept": 20.7999305309372
+        }
+      },
+      "valid_range": [
+        0.0,
+        200.0
+      ],
+      "notes": "calibration taken from the latest experiments Stable slope-only load calibration; catalog intercept is zero by operator decision on 2026-11-05. Measure and subtract an unloaded baseline separately for each experiment before apparatus correction; do not remove a real preload. The original experiment-specific TDMS coefficients are retained in provenance.source_tdms_parameters.",
+      "baseline_policy": {
+        "method": "subtract_unloaded_reference",
+        "equation": "F_kN = slope_kN_per_V * (V - V0)",
+        "reference": "Experiment-specific unloaded interval; record selection and baseline in reduction history.",
+        "constant_offset_only": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "apparatus": "BigBiax",
+      "purpose": "acquisition",
+      "id": "BigBiax/frame/vertical/Displacement/TK_long",
+      "category": "sensor",
+      "sensor": "Vertical displacement",
+      "configuration": "standard rack",
+      "date": "2026-11-04",
+      "source": "/Users/marcoscuderi/Library/CloudStorage/GoogleDrive-marco.scuderi@uniroma1.it/My Drive/Experiments/bigBiax/04_Experiments/r0082/r0082s05min40_20_aux6_fixed.tdms",
+      "input_unit": "V",
+      "output_unit": "um",
+      "model": "linear",
+      "gain": "high",
+      "parameters": {
+        "slope": 3662.9,
+        "intercept": 29509.795096957783
+      },
+      "provenance": {
+        "tdms_sha256": "3e902a822407921dadbcbd1e6f81117d20c12dc786ac06994091eead3e3bdf2e",
+        "channel": "ADC/Vertical Displacement"
+      },
+      "valid_range": [
+        0.0,
+        200.0
+      ],
+      "notes": "transteck long DCDT used on the vertical axis to control LP_disp"
+    },
+    {
+      "schema_version": 1,
+      "apparatus": "BigBiax",
+      "purpose": "acquisition",
+      "id": "BigBiax/frame/horizontal/TK_short",
+      "category": "sensor",
+      "sensor": "horizontal displacement",
+      "configuration": "standard rack",
+      "date": "2026-11-04",
+      "source": "/Users/marcoscuderi/Library/CloudStorage/GoogleDrive-marco.scuderi@uniroma1.it/My Drive/Experiments/bigBiax/04_Experiments/r0082/r0082s05min40_20_aux6_fixed.tdms",
+      "input_unit": "V",
+      "output_unit": "um",
+      "model": "linear",
+      "gain": "high",
+      "parameters": {
+        "slope": 1613.8,
+        "intercept": 3912.779970390701
+      },
+      "provenance": {
+        "tdms_sha256": "3e902a822407921dadbcbd1e6f81117d20c12dc786ac06994091eead3e3bdf2e",
+        "channel": "ADC/Horizontal Displacement"
+      },
+      "valid_range": [
+        0.0,
+        200.0
+      ],
+      "notes": "transtek short intalled on horizontal ram"
+    },
+    {
+      "schema_version": 1,
+      "apparatus": "BigBiax",
+      "purpose": "auxiliary",
+      "id": "BigBiax/aux/onboard_LVDT/15V",
+      "category": "sensor",
+      "sensor": "On-board LVDT",
+      "configuration": "LVDT powered at 15 V; recorded through AUX channel",
+      "date": "2026-07-17",
+      "source": "BigBiax drive folder under calibration",
+      "input_unit": "V",
+      "output_unit": "um",
+      "model": "linear",
+      "gain": "no gain applied",
+      "parameters": {
+        "slope": 855.035,
+        "intercept": 0.0
+      },
+      "valid_range": [
+        0.0,
+        200.0
+      ],
+      "notes": "R² = 0.99864. Exclude nonlinear endpoints."
+    },
+    {
+      "schema_version": 1,
+      "id": "BigBiax/frame/horizontal/2026-07-16/loading/r1",
+      "category": "apparatus",
+      "purpose": "elastic",
+      "apparatus": "BigBiax",
+      "sensor": "Horizontal ram and measured load train",
+      "configuration": "Horizontal ram test recorded 2026-07-16; calibration assembly details not present in TDMS",
+      "date": "2026-07-16",
+      "input_unit": "kN",
+      "output_unit": "um",
+      "model": "polynomial",
+      "parameters": {
+        "coefficients": [
+          3.729715811303056e-05,
+          -0.01100817327596508,
+          4.344287771141661,
+          -42.37935754193313
+        ]
+      },
+      "valid_range": [
+        10.0,
+        150.0
+      ],
+      "source": "horizontal_stiffness(1).tdms",
+      "notes": "Branch-specific loading effective deformation e(F), not stiffness k(F). Cubic fit to cycles 3 and 4 after conditioning. Reference e(10 kN)=0. Input is TDMS-calibrated absolute force; no contact-zero/gravity shift. Positive converted displacement increases with force. Hysteresis requires explicit branch choice; a single memoryless polynomial cannot correct complete loops. Do not extrapolate below 10 or above 150 kN. Treat as apparatus-only compliance only if assembly deformation is negligible.",
+      "review_status": "analysis_proposal_for_operator_validation",
+      "branch": "loading",
+      "fit": {
+        "fit_rmse_um": 0.5745909490492087,
+        "r_squared": 0.9999830936807543,
+        "maximum_abs_residual_um": 1.8946598686251406,
+        "cross_validation_rmse_um": 0.7050048361513307,
+        "cycle_difference_rmse_um": 0.64256241604086,
+        "cycle_difference_max_um": 1.2964052238457953
+      },
+      "provenance": {
+        "tdms_sha256": "7ecf6c3b885eced1b185c1510e3c108972ccd648eca6cb2cbd6adf69d10e17fd",
+        "date_source": "TDMS Start_Datetime",
+        "force_channel": "ADC/Horizontal Load",
+        "displacement_channel": "ADC/Horizontal Displacement",
+        "conversions": {
+          "Time": {
+            "Slope": 1.0,
+            "Intercept": 0.0
+          },
+          "Horizontal Load": {
+            "Slope": 25.708,
+            "Intercept": 25.80281443125915
+          },
+          "Horizontal Displacement": {
+            "Slope": 1613.8,
+            "Intercept": 3912.779970390701
+          }
+        },
+        "model_reference_force_kN": 10.0,
+        "cycles": [
+          3,
+          4
+        ],
+        "force_bin_width_kN": 2.0,
+        "force_grid_kN": [
+          10.0,
+          12.0,
+          14.0,
+          16.0,
+          18.0,
+          20.0,
+          22.0,
+          24.0,
+          26.0,
+          28.0,
+          30.0,
+          32.0,
+          34.0,
+          36.0,
+          38.0,
+          40.0,
+          42.0,
+          44.0,
+          46.0,
+          48.0,
+          50.0,
+          52.0,
+          54.0,
+          56.0,
+          58.0,
+          60.0,
+          62.0,
+          64.0,
+          66.0,
+          68.0,
+          70.0,
+          72.0,
+          74.0,
+          76.0,
+          78.0,
+          80.0,
+          82.0,
+          84.0,
+          86.0,
+          88.0,
+          90.0,
+          92.0,
+          94.0,
+          96.0,
+          98.0,
+          100.0,
+          102.0,
+          104.0,
+          106.0,
+          108.0,
+          110.0,
+          112.0,
+          114.0,
+          116.0,
+          118.0,
+          120.0,
+          122.0,
+          124.0,
+          126.0,
+          128.0,
+          130.0,
+          132.0,
+          134.0,
+          136.0,
+          138.0,
+          140.0,
+          142.0,
+          144.0,
+          146.0,
+          148.0,
+          150.0
+        ],
+        "weighting": "equal force-grid weights and equal cycle weights; no sample-rate weighting",
+        "reference_policy": "Each selected branch referenced separately at 10 kN after median force-binning and linear interpolation.",
+        "selected_records": [
+          {
+            "cycle": 3,
+            "start": 4340,
+            "end": 4912
+          },
+          {
+            "cycle": 4,
+            "start": 7290,
+            "end": 13014
+          }
+        ]
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "BigBiax/frame/horizontal/2026-07-16/unloading/r1",
+      "category": "apparatus",
+      "purpose": "elastic",
+      "apparatus": "BigBiax",
+      "sensor": "Horizontal ram and measured load train",
+      "configuration": "Horizontal ram test recorded 2026-07-16; calibration assembly details not present in TDMS",
+      "date": "2026-07-16",
+      "input_unit": "kN",
+      "output_unit": "um",
+      "model": "polynomial",
+      "parameters": {
+        "coefficients": [
+          5.984000763759925e-05,
+          -0.023342766360793833,
+          5.8789880880916705,
+          -56.51544425247492
+        ]
+      },
+      "valid_range": [
+        10.0,
+        150.0
+      ],
+      "source": "horizontal_stiffness(1).tdms",
+      "notes": "Branch-specific unloading effective deformation e(F), not stiffness k(F). Cubic fit to cycles 3 and 4 after conditioning. Reference e(10 kN)=0. Input is TDMS-calibrated absolute force; no contact-zero/gravity shift. Positive converted displacement increases with force. Hysteresis requires explicit branch choice; a single memoryless polynomial cannot correct complete loops. Do not extrapolate below 10 or above 150 kN. Treat as apparatus-only compliance only if assembly deformation is negligible.",
+      "review_status": "analysis_proposal_for_operator_validation",
+      "branch": "unloading",
+      "fit": {
+        "fit_rmse_um": 0.9087093170279719,
+        "r_squared": 0.9999595897020105,
+        "maximum_abs_residual_um": 2.635573661316016,
+        "cross_validation_rmse_um": 1.4995856903063296,
+        "cycle_difference_rmse_um": 1.443694210297888,
+        "cycle_difference_max_um": 2.3047123173901127
+      },
+      "provenance": {
+        "tdms_sha256": "7ecf6c3b885eced1b185c1510e3c108972ccd648eca6cb2cbd6adf69d10e17fd",
+        "date_source": "TDMS Start_Datetime",
+        "force_channel": "ADC/Horizontal Load",
+        "displacement_channel": "ADC/Horizontal Displacement",
+        "conversions": {
+          "Time": {
+            "Slope": 1.0,
+            "Intercept": 0.0
+          },
+          "Horizontal Load": {
+            "Slope": 25.708,
+            "Intercept": 25.80281443125915
+          },
+          "Horizontal Displacement": {
+            "Slope": 1613.8,
+            "Intercept": 3912.779970390701
+          }
+        },
+        "model_reference_force_kN": 10.0,
+        "cycles": [
+          3,
+          4
+        ],
+        "force_bin_width_kN": 2.0,
+        "force_grid_kN": [
+          10.0,
+          12.0,
+          14.0,
+          16.0,
+          18.0,
+          20.0,
+          22.0,
+          24.0,
+          26.0,
+          28.0,
+          30.0,
+          32.0,
+          34.0,
+          36.0,
+          38.0,
+          40.0,
+          42.0,
+          44.0,
+          46.0,
+          48.0,
+          50.0,
+          52.0,
+          54.0,
+          56.0,
+          58.0,
+          60.0,
+          62.0,
+          64.0,
+          66.0,
+          68.0,
+          70.0,
+          72.0,
+          74.0,
+          76.0,
+          78.0,
+          80.0,
+          82.0,
+          84.0,
+          86.0,
+          88.0,
+          90.0,
+          92.0,
+          94.0,
+          96.0,
+          98.0,
+          100.0,
+          102.0,
+          104.0,
+          106.0,
+          108.0,
+          110.0,
+          112.0,
+          114.0,
+          116.0,
+          118.0,
+          120.0,
+          122.0,
+          124.0,
+          126.0,
+          128.0,
+          130.0,
+          132.0,
+          134.0,
+          136.0,
+          138.0,
+          140.0,
+          142.0,
+          144.0,
+          146.0,
+          148.0,
+          150.0
+        ],
+        "weighting": "equal force-grid weights and equal cycle weights; no sample-rate weighting",
+        "reference_policy": "Each selected branch referenced separately at 10 kN after median force-binning and linear interpolation.",
+        "selected_records": [
+          {
+            "cycle": 3,
+            "start": 4912,
+            "end": 5483
+          },
+          {
+            "cycle": 4,
+            "start": 13014,
+            "end": 18710
+          }
+        ]
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "BigBiax/frame/vertical/2026-07-16/loading/r1",
+      "category": "apparatus",
+      "purpose": "elastic",
+      "apparatus": "BigBiax",
+      "sensor": "Vertical ram and measured load train",
+      "configuration": "Vertical ram test recorded 2026-07-16; calibration assembly details not present in TDMS",
+      "date": "2026-07-16",
+      "input_unit": "kN",
+      "output_unit": "um",
+      "model": "polynomial",
+      "parameters": {
+        "coefficients": [
+          1.8857086709516565e-08,
+          -9.217695821451732e-06,
+          0.0017655432974630052,
+          -0.16981398264879344,
+          11.83699154091458,
+          -181.52409548451644
+        ]
+      },
+      "valid_range": [
+        20.0,
+        150.0
+      ],
+      "source": "vertical_stiffness.tdms",
+      "notes": "Branch-specific loading effective deformation e(F), not stiffness k(F). Fifth-degree fit to cycles 2, 3 and 4 after conditioning. Reference e(20 kN)=0. Input is TDMS-calibrated absolute force; no contact-zero/gravity shift. Positive converted displacement increases with force. Hysteresis requires explicit branch choice; a single memoryless polynomial cannot correct complete loops. Do not extrapolate below 20 or above 150 kN. Treat as apparatus-only compliance only if assembly deformation is negligible.",
+      "review_status": "analysis_proposal_for_operator_validation",
+      "branch": "loading",
+      "fit": {
+        "fit_rmse_um": 3.666442893519989,
+        "r_squared": 0.999309507060629,
+        "maximum_abs_residual_um": 6.855255546636272,
+        "cross_validation_rmse_um": 5.462737285973105,
+        "cycle_difference_rmse_um": 6.2866007361968945,
+        "cycle_difference_max_um": 12.471026488801726
+      },
+      "provenance": {
+        "tdms_sha256": "2716cd5dc6c7089e852c06485ddccd047a660dacc1963327a4ab6496d5c7c643",
+        "date_source": "TDMS Start_Datetime",
+        "force_channel": "ADC/Vertical Load",
+        "displacement_channel": "ADC/Vertical Displacement",
+        "conversions": {
+          "Time": {
+            "Slope": 1.0,
+            "Intercept": 0.0
+          },
+          "Vertical Load": {
+            "Slope": 23.203,
+            "Intercept": -0.0529920321960449
+          },
+          "Vertical Displacement": {
+            "Slope": 3662.9,
+            "Intercept": 29509.795096957783
+          }
+        },
+        "model_reference_force_kN": 20.0,
+        "cycles": [
+          2,
+          3,
+          4
+        ],
+        "force_bin_width_kN": 2.0,
+        "force_grid_kN": [
+          20.0,
+          22.0,
+          24.0,
+          26.0,
+          28.0,
+          30.0,
+          32.0,
+          34.0,
+          36.0,
+          38.0,
+          40.0,
+          42.0,
+          44.0,
+          46.0,
+          48.0,
+          50.0,
+          52.0,
+          54.0,
+          56.0,
+          58.0,
+          60.0,
+          62.0,
+          64.0,
+          66.0,
+          68.0,
+          70.0,
+          72.0,
+          74.0,
+          76.0,
+          78.0,
+          80.0,
+          82.0,
+          84.0,
+          86.0,
+          88.0,
+          90.0,
+          92.0,
+          94.0,
+          96.0,
+          98.0,
+          100.0,
+          102.0,
+          104.0,
+          106.0,
+          108.0,
+          110.0,
+          112.0,
+          114.0,
+          116.0,
+          118.0,
+          120.0,
+          122.0,
+          124.0,
+          126.0,
+          128.0,
+          130.0,
+          132.0,
+          134.0,
+          136.0,
+          138.0,
+          140.0,
+          142.0,
+          144.0,
+          146.0,
+          148.0,
+          150.0
+        ],
+        "weighting": "equal force-grid weights and equal cycle weights; no sample-rate weighting",
+        "reference_policy": "Each selected branch referenced separately at 20 kN after median force-binning and linear interpolation.",
+        "selected_records": [
+          {
+            "cycle": 2,
+            "start": 3174,
+            "end": 4117
+          },
+          {
+            "cycle": 3,
+            "start": 5362,
+            "end": 6286
+          },
+          {
+            "cycle": 4,
+            "start": 18068,
+            "end": 27435
+          }
+        ]
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "BigBiax/frame/vertical/2026-07-16/unloading/r1",
+      "category": "apparatus",
+      "purpose": "elastic",
+      "apparatus": "BigBiax",
+      "sensor": "Vertical ram and measured load train",
+      "configuration": "Vertical ram test recorded 2026-07-16; calibration assembly details not present in TDMS",
+      "date": "2026-07-16",
+      "input_unit": "kN",
+      "output_unit": "um",
+      "model": "polynomial",
+      "parameters": {
+        "coefficients": [
+          1.429309202820096e-08,
+          -7.3132830696577535e-06,
+          0.0014647282644730574,
+          -0.14962069173405912,
+          11.31165039608775,
+          -176.97816994726085
+        ]
+      },
+      "valid_range": [
+        20.0,
+        150.0
+      ],
+      "source": "vertical_stiffness.tdms",
+      "notes": "Branch-specific unloading effective deformation e(F), not stiffness k(F). Fifth-degree fit to cycles 2, 3 and 4 after conditioning. Reference e(20 kN)=0. Input is TDMS-calibrated absolute force; no contact-zero/gravity shift. Positive converted displacement increases with force. Hysteresis requires explicit branch choice; a single memoryless polynomial cannot correct complete loops. Do not extrapolate below 20 or above 150 kN. Treat as apparatus-only compliance only if assembly deformation is negligible.",
+      "review_status": "analysis_proposal_for_operator_validation",
+      "branch": "unloading",
+      "fit": {
+        "fit_rmse_um": 1.2492519673619789,
+        "r_squared": 0.999914710730716,
+        "maximum_abs_residual_um": 2.689202299982071,
+        "cross_validation_rmse_um": 1.8129880283987931,
+        "cycle_difference_rmse_um": 2.0663817186892746,
+        "cycle_difference_max_um": 3.791182146371284
+      },
+      "provenance": {
+        "tdms_sha256": "2716cd5dc6c7089e852c06485ddccd047a660dacc1963327a4ab6496d5c7c643",
+        "date_source": "TDMS Start_Datetime",
+        "force_channel": "ADC/Vertical Load",
+        "displacement_channel": "ADC/Vertical Displacement",
+        "conversions": {
+          "Time": {
+            "Slope": 1.0,
+            "Intercept": 0.0
+          },
+          "Vertical Load": {
+            "Slope": 23.203,
+            "Intercept": -0.0529920321960449
+          },
+          "Vertical Displacement": {
+            "Slope": 3662.9,
+            "Intercept": 29509.795096957783
+          }
+        },
+        "model_reference_force_kN": 20.0,
+        "cycles": [
+          2,
+          3,
+          4
+        ],
+        "force_bin_width_kN": 2.0,
+        "force_grid_kN": [
+          20.0,
+          22.0,
+          24.0,
+          26.0,
+          28.0,
+          30.0,
+          32.0,
+          34.0,
+          36.0,
+          38.0,
+          40.0,
+          42.0,
+          44.0,
+          46.0,
+          48.0,
+          50.0,
+          52.0,
+          54.0,
+          56.0,
+          58.0,
+          60.0,
+          62.0,
+          64.0,
+          66.0,
+          68.0,
+          70.0,
+          72.0,
+          74.0,
+          76.0,
+          78.0,
+          80.0,
+          82.0,
+          84.0,
+          86.0,
+          88.0,
+          90.0,
+          92.0,
+          94.0,
+          96.0,
+          98.0,
+          100.0,
+          102.0,
+          104.0,
+          106.0,
+          108.0,
+          110.0,
+          112.0,
+          114.0,
+          116.0,
+          118.0,
+          120.0,
+          122.0,
+          124.0,
+          126.0,
+          128.0,
+          130.0,
+          132.0,
+          134.0,
+          136.0,
+          138.0,
+          140.0,
+          142.0,
+          144.0,
+          146.0,
+          148.0,
+          150.0
+        ],
+        "weighting": "equal force-grid weights and equal cycle weights; no sample-rate weighting",
+        "reference_policy": "Each selected branch referenced separately at 20 kN after median force-binning and linear interpolation.",
+        "selected_records": [
+          {
+            "cycle": 2,
+            "start": 4117,
+            "end": 5020
+          },
+          {
+            "cycle": 3,
+            "start": 6286,
+            "end": 7173
+          },
+          {
+            "cycle": 4,
+            "start": 27435,
+            "end": 36338
+          }
+        ]
+      }
+    }
+  ],
+  "suggested_defaults": {}
+}

@@ -19,6 +19,8 @@ def main(argv=None):
     calibration.add_argument("action", choices=["import", "list", "show"])
     calibration.add_argument("value", nargs="?")
     calibration.add_argument("--registry")
+    from . import catalog_cli
+    catalog_cli.configure(sub.add_parser("catalog", help="Manage a BigBiax JSON catalog"))
     args = parser.parse_args(argv)
     try:
         if args.command == "run":
@@ -26,6 +28,8 @@ def main(argv=None):
         elif args.command == "gui":
             from .gui import launch
             return launch(args.script, args.registry)
+        elif args.command == "catalog":
+            catalog_cli.execute(args)
         else:
             registry = Registry(args.registry)
             if args.action == "import":

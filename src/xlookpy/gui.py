@@ -10,6 +10,7 @@ import sys
 import numpy as np
 from PySide6 import QtCore, QtGui, QtWidgets
 import pyqtgraph as pg
+from .analysis import fit_polynomial
 from .calibration import Registry
 from .io import read_state
 from .util import file_digest
@@ -29,6 +30,9 @@ class PlotPanel(QtWidgets.QWidget):
         self.exp, self.spec = exp, spec
         self.last_picks = []
         self.pick_markers = []
+        self.fit_start = None
+        self.fit_marker = None
+        self.fit_overlay = None
         self._updating = False
         layout = QtWidgets.QVBoxLayout(self)
         controls = QtWidgets.QHBoxLayout()
@@ -41,6 +45,24 @@ class PlotPanel(QtWidgets.QWidget):
         copy.clicked.connect(self.copy_interval)
         controls.addWidget(copy)
         layout.addLayout(controls)
+        fit_controls = QtWidgets.QHBoxLayout()
+        fit_controls.addWidget(QtWidgets.QLabel("Fit degree"))
+        self.fit_degree = QtWidgets.QComboBox()
+        self.fit_degree.addItem("1 · Linear", 1)
+        for degree in range(2, 7):
+            self.fit_degree.addItem(str(degree), degree)
+        fit_controls.addWidget(self.fit_degree)
+        self.fit_button = QtWidgets.QPushButton("Fit interval")
+        self.fit_button.setCheckable(True)
+        self.fit_button.setToolTip("Click two points on the same curve to fit the records between them.")
+        self.fit_button.toggled.connect(self.toggle_fit)
+        fit_controls.addWidget(self.fit_button)
+        self.clear_fit_button = QtWidgets.QPushButton("Clear fit")
+        self.clear_fit_button.clicked.connect(self.clear_fit)
+        self.clear_fit_button.setEnabled(False)
+        fit_controls.addWidget(self.clear_fit_button)
+        fit_controls.addStretch()
+        layout.addLayout(fit_controls)
         self.plot = pg.PlotWidget()
         self.plot.showGrid(x=True, y=True, alpha=0.2)
         layout.addWidget(self.plot)
@@ -80,6 +102,7 @@ class PlotPanel(QtWidgets.QWidget):
                 exp[name]
         keep_range = self.primary.vb.viewRange()[0] if preserve_x and self.curves and self.spec["x"] == spec["x"] else None
         self._updating = True
+        self.clear_fit()
         self.primary.vb.setXLink(None)
         for axis, item in self.plot_items:
             axis.removeItem(item)
@@ -148,10 +171,12 @@ class PlotPanel(QtWidgets.QWidget):
         if self.primary.vb.sceneBoundingRect().contains(position):
             self.crosshair.setValue(self.primary.vb.mapSceneToView(position).x())
 
-    def nearest(self, position):
+    def nearest(self, position, *, channel=None):
         """Full-resolution screen-distance picking, including nonmonotonic X."""
         best = None
         for axis, name, x, y in self.curves:
+            if channel is not None and channel != name:
+                continue
             rect = axis.sceneBoundingRect()
             if not rect.contains(position):
                 continue
@@ -176,6 +201,9 @@ class PlotPanel(QtWidgets.QWidget):
     def click(self, event):
         if event.button() != QtCore.Qt.MouseButton.LeftButton:
             return
+        if self.fit_button.isChecked():
+            self.pick_fit_endpoint(event.scenePos())
+            return
         point = self.nearest(event.scenePos())
         if point is None:
             return
@@ -194,6 +222,84 @@ class PlotPanel(QtWidgets.QWidget):
         self.primary.addItem(marker, ignoreBounds=True)
         self.pick_markers.append(marker)
 
+    def toggle_fit(self, enabled):
+        self.fit_start = None
+        if self.fit_marker is not None:
+            self.primary.removeItem(self.fit_marker)
+            self.fit_marker = None
+        self.status.setText("Click the first point on the curve you want to fit."
+                            if enabled else "Click near a curve to pick its original record.")
+
+    def clear_fit(self):
+        self.fit_button.setChecked(False)
+        if self.fit_overlay is not None:
+            axis, item = self.fit_overlay
+            axis.removeItem(item)
+            self.fit_overlay = None
+            self.status.setText("Fit cleared. Click near a curve to pick its original record.")
+        self.clear_fit_button.setEnabled(False)
+
+    def pick_fit_endpoint(self, position):
+        channel = self.fit_start[1] if self.fit_start is not None else None
+        point = self.nearest(position, channel=channel)
+        if point is None:
+            self.status.setText(f"Click near {channel} for the second endpoint." if channel
+                                else "Click near a plotted curve for the first endpoint.")
+            return
+        _, i, channel = point
+        xname = self.spec["x"]
+        if self.fit_start is None:
+            self.fit_start = (i, channel)
+            self.fit_marker = pg.InfiniteLine(
+                pos=self.exp[xname].values[i], angle=90,
+                pen=pg.mkPen("#7943a0", style=QtCore.Qt.PenStyle.DotLine))
+            self.primary.addItem(self.fit_marker, ignoreBounds=True)
+            self.status.setText(f"First point at record {self.exp.record_ids[i]}. Click the second point on {channel}.")
+            return
+
+        start, end = sorted((self.fit_start[0], i))
+        first, last = self.exp.record_ids[[start, end]]
+        axis, _, x, y = next(curve for curve in self.curves if curve[1] == channel)
+        x = x[start:end+1]
+        y = y[start:end+1]
+        good = np.isfinite(x) & np.isfinite(y)
+        x, y = x[good], y[good]
+        degree = self.fit_degree.currentData()
+        xu = "row" if xname == "record_id" else self.exp[xname].unit
+        yu = "row" if channel == "record_id" else self.exp[channel].unit
+        try:
+            poly, result = fit_polynomial(x, y, degree, x_unit=xu, y_unit=yu)
+        except (ValueError, np.linalg.LinAlgError) as exc:
+            self.fit_button.setChecked(False)
+            message = f"Fit refused for records {first}–{last}: {exc}"
+            self.status.setText(message)
+            self.picked.emit(message)
+            return
+
+        self.clear_fit()
+        xx = np.linspace(x.min(), x.max(), 256)
+        item = pg.PlotDataItem(xx, poly(xx), pen=pg.mkPen("#7943a0", width=3))
+        item.setZValue(10)
+        axis.addItem(item, ignoreBounds=True)
+        self.fit_overlay = (axis, item)
+        self.clear_fit_button.setEnabled(True)
+        title = f"Degree {degree} fit · {channel} vs {xname} · records {first}–{last}"
+        coefficients = result["coefficients"]
+        r_squared = result["r_squared"]
+        quality = f"R² = {r_squared:.8g}" if r_squared is not None else "R² undefined"
+        rmse = result["rmse"]
+        error = f"RMSE = {rmse:.8g} {yu}" if rmse is not None else "RMSE unavailable"
+        details = [f"{result['n_points']} samples, {quality}, {error}"]
+        if degree == 1:
+            # Polynomial.convert() can drop a trailing zero coefficient.
+            slope = coefficients[1] if len(coefficients) > 1 else 0.0
+            details.append(f"Slope = {slope:.12g} {yu}/{xu}, intercept = {coefficients[0]:.12g} {yu}")
+        else:
+            terms = ", ".join(f"a{j} = {value:.12g}" for j, value in enumerate(coefficients))
+            details.append(f"Coefficients for y = a0 + a1*x + … (X in {xu}, Y in {yu}): {terms}")
+        self.status.setText(f"{title}\n{details[-1]}")
+        self.picked.emit("\n".join([title, *details]))
+
     def copy_interval(self):
         if len(self.last_picks) < 2:
             self.status.setText("Pick two points first.")
@@ -203,6 +309,31 @@ class PlotPanel(QtWidgets.QWidget):
         QtWidgets.QApplication.clipboard().setText(text)
         self.status.setText("Copied "+text+" (inclusive original record IDs)")
         self.picked.emit("Copied "+text)
+
+
+class WorkspaceDock(QtWidgets.QDockWidget):
+    def __init__(self, title, parent):
+        super().__init__(title, parent)
+        if sys.platform == "darwin":
+            self._window_timer = QtCore.QTimer(self, interval=50, singleShot=True)
+            self._window_timer.timeout.connect(self._use_normal_window)
+            self.topLevelChanged.connect(lambda _: self._window_timer.start())
+
+    def _use_normal_window(self):
+        if not self.isFloating() or self.windowType() != QtCore.Qt.WindowType.Tool:
+            return
+        # Qt uses a tool window for floating docks. Wait until its drag has
+        # finished before replacing the flags, which hides the native window.
+        if QtWidgets.QApplication.mouseButtons() & QtCore.Qt.MouseButton.LeftButton:
+            self._window_timer.start()
+            return
+        flags = self.windowFlags() & ~QtCore.Qt.WindowType.WindowType_Mask
+        position = self.pos()
+        visible = not self.isHidden()
+        self.setWindowFlags(flags | QtCore.Qt.WindowType.Window)
+        self.move(position)
+        if visible:
+            self.show()
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -234,6 +365,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self._plot_count = 0
         self.editor = CodeEditor()
         self.editor.sourceChanged.connect(self.edited)
+        self.panels_menu = self.menuBar().addMenu("&View").addMenu("&Panels")
         self.log = QtWidgets.QPlainTextEdit()
         self.log.setReadOnly(True)
         self.info = QtWidgets.QPlainTextEdit()
@@ -279,12 +411,14 @@ class MainWindow(QtWidgets.QMainWindow):
         bottom_dock = self.add_dock("Execution log and picked points", self.log, QtCore.Qt.DockWidgetArea.BottomDockWidgetArea)
         console_panel = QtWidgets.QWidget()
         console_layout = QtWidgets.QVBoxLayout(console_panel)
-        console_controls = QtWidgets.QHBoxLayout()
+        console_controls = QtWidgets.QBoxLayout(QtWidgets.QBoxLayout.Direction.LeftToRight)
         self.start_console_button = QtWidgets.QPushButton("Start IPython")
         self.start_console_button.clicked.connect(self.start_console)
         console_controls.addWidget(self.start_console_button)
         self.console_commands = QtWidgets.QComboBox()
-        self.console_commands.setMinimumContentsLength(24)
+        self.console_commands.setSizeAdjustPolicy(
+            QtWidgets.QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+        self.console_commands.setMinimumContentsLength(8)
         console_controls.addWidget(self.console_commands, 1)
         self.insert_command_button = QtWidgets.QPushButton("Insert command into script")
         self.insert_command_button.setToolTip("Insert the chosen submitted command at the editor cursor, without executing it.")
@@ -298,6 +432,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.console.executing.connect(self.console_started)
         console_layout.addWidget(self.console)
         self.console_dock = self.add_dock("IPython workspace", console_panel, QtCore.Qt.DockWidgetArea.BottomDockWidgetArea)
+        self.console_dock.dockLocationChanged.connect(
+            lambda area: console_controls.setDirection(
+                QtWidgets.QBoxLayout.Direction.TopToBottom if area in (
+                    QtCore.Qt.DockWidgetArea.LeftDockWidgetArea,
+                    QtCore.Qt.DockWidgetArea.RightDockWidgetArea,
+                ) else QtWidgets.QBoxLayout.Direction.LeftToRight))
         self.tabifyDockWidget(bottom_dock, self.console_dock)
         bottom_dock.raise_()
         self.resizeDocks([left_dock, right_dock], [280, 480], QtCore.Qt.Orientation.Horizontal)
@@ -327,9 +467,12 @@ class MainWindow(QtWidgets.QMainWindow):
             self.open_script(Path(script))
 
     def add_dock(self, title, widget, area):
-        dock = QtWidgets.QDockWidget(title, self)
+        dock = WorkspaceDock(title, self)
         dock.setWidget(widget)
         self.addDockWidget(area, dock)
+        action = dock.toggleViewAction()
+        action.triggered.connect(lambda shown: dock.raise_() if shown else None)
+        self.panels_menu.addAction(action)
         return dock
 
     def close_tab(self, index):
@@ -538,6 +681,11 @@ class MainWindow(QtWidgets.QMainWindow):
             self.editor.setFocus()
 
     def start_console(self):
+        if self.ensure_kernel():
+            self.console_dock.show()
+            self.console_dock.raise_()
+
+    def ensure_kernel(self):
         if not self.script or self.process is not None:
             return False
         if legacy_source(self.editor.toPlainText()):
@@ -558,8 +706,6 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.log.appendPlainText("Cannot start IPython:\n"+traceback.format_exc())
                 self._pending_workspace_action = None
                 return False
-        self.console_dock.show()
-        self.console_dock.raise_()
         return True
 
     def workspace_ready(self, ready):
@@ -590,7 +736,7 @@ class MainWindow(QtWidgets.QMainWindow):
             return
         source = self.editor.toPlainText()
         index = self.current_cell_index()
-        if not self.start_console():
+        if not self.ensure_kernel():
             return
         if not self.kernel.ready:
             self._pending_workspace_action = (action, source, index)
@@ -612,7 +758,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.clear_interactive_display()
         self.workspace_status.setText("Workspace restarted — variables and cell state cleared. Saved results remain on disk.")
         self.refresh_cells()
-        self.start_console()
+        self.ensure_kernel()
 
     def shutdown_kernel(self):
         self._pending_workspace_action = None
@@ -791,6 +937,9 @@ class MainWindow(QtWidgets.QMainWindow):
         if self.process:
             self.process.kill()
             self.process.waitForFinished(3000)
+        for dock in self.findChildren(WorkspaceDock):
+            if dock.isFloating():
+                dock.close()
         super().closeEvent(event)
 
 

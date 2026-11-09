@@ -104,17 +104,33 @@ class Registry:
         # Validate path independently before touching the filesystem.
         if not isinstance(identifier, str) or not re.fullmatch(r"[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*", identifier) or any(p in (".", "..") for p in identifier.split("/")):
             raise ValueError("Invalid calibration identifier.")
+        from .catalog import Catalog
+        if self.root.suffix.lower() == ".json":
+            return Catalog(self.root).get(identifier)
         # Append extension; revisions may themselves contain dots.
         path = Path(str(self.root.joinpath(*identifier.split("/"))) + ".json")
+        catalog_cal = None
+        if identifier.startswith("BigBiax/") and (self.root / "BigBiax.json").is_file():
+            try:
+                catalog_cal = Catalog(self.root / "BigBiax.json").get(identifier)
+            except FileNotFoundError:
+                pass
         if not path.is_file():
+            if catalog_cal is not None:
+                return catalog_cal
             raise FileNotFoundError(f"Calibration {identifier!r} is not installed in {self.root}. Import its JSON first.")
         cal = Calibration(json.loads(path.read_text(encoding="utf-8")))
         if cal.id != identifier:
             raise ValueError(f"Registry path and calibration id differ: {path}.")
+        if catalog_cal is not None and cal.fingerprint != catalog_cal.fingerprint:
+            raise ValueError(f"Conflicting catalog and individual-record definitions for {identifier}.")
         return cal
 
     def import_file(self, source):
         cal = Calibration(json.loads(Path(source).read_text(encoding="utf-8")))
+        if self.root.suffix.lower() == ".json":
+            from .catalog import Catalog
+            return Catalog(self.root).add(cal.record)
         path = Path(str(self.root.joinpath(*cal.id.split("/"))) + ".json")
         path.parent.mkdir(parents=True, exist_ok=True)
         try:
@@ -127,4 +143,18 @@ class Registry:
         return cal
 
     def list(self):
-        return [Calibration(json.loads(p.read_text(encoding="utf-8"))) for p in sorted(self.root.rglob("*.json"))]
+        from .catalog import Catalog
+        if self.root.suffix.lower() == ".json":
+            return Catalog(self.root).list()
+        records = []
+        for p in sorted(self.root.rglob("*.json")):
+            if p == self.root / "BigBiax.json":
+                records.extend(Catalog(p).list())
+            else:
+                records.append(Calibration(json.loads(p.read_text(encoding="utf-8"))))
+        unique = {}
+        for cal in records:
+            if cal.id in unique and unique[cal.id].fingerprint != cal.fingerprint:
+                raise ValueError(f"Conflicting registry definitions for {cal.id}.")
+            unique[cal.id] = cal
+        return list(unique.values())

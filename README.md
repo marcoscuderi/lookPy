@@ -37,12 +37,22 @@ LEFT and optional RIGHT channels, then click **New plot tab**. Change channels
 and click **Refresh axes** to update the active plot without creating another
 tab. Use `record_id` as an axis to inspect original row number against time.
 
+Choose a **Fit degree** (1 for a slope, 2–6 for a polynomial), click **Fit
+interval**, then click two points on the curve of interest. The fit uses all
+finite X/Y pairs between those original records, inclusive. The plot draws the
+fit on the curve's Y axis. The execution log shows the interval, sample count,
+fit quality and coefficients, including the slope and its units for degree 1.
+Each new fit replaces the previous overlay in that tab. **Clear fit** removes
+it. Use the reduction script's `exp.fit()` for fits you want to save and replay.
+
 The embedded editor still supports Python colouring, font-size controls and
 dark/light themes. Click curves to copy original row IDs and two-point intervals.
 
 The included raw.csv and calibration_examples are explicitly synthetic fixtures.
-They are not calibration values for the apparatus. No real TDMS experiments or
-measured calibration registry is included in this public repository.
+They are not calibration values for the apparatus. The operator-reviewed
+`calibrations/BigBiax.json` contains the published laboratory calibration catalog;
+see the [calibration guide](docs/BIGBIAX_CALIBRATIONS.md) for baseline handling,
+configuration checks and explicit selection. Real TDMS experiments are not included.
 
 ## Standard experiment reduction
 
@@ -78,7 +88,8 @@ first successful Linux/macOS CI run; published tags are never moved.
 - main contains accepted changes; future work uses a separate branch and PR.
 - Automated tests and operator acceptance precede merging.
 - Numerical algorithms remain separate from the GUI.
-- Real calibration records and experiment directories stay outside this repo.
+- Experiment directories and private calibration additions stay outside this repo;
+  the operator-approved BigBiax catalog is versioned explicitly.
 - Changes and releases are recorded in [CHANGELOG.md](CHANGELOG.md).
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). Branch protection is a repository-owner
@@ -132,3 +143,9 @@ a working copy of your current script, testing and returning to main.
 The [Mac update guide](docs/testing/CHANNEL_UPDATES_MAC.md) describes stable editor
 colouring, in-place working-channel updates, preserved revision history and
 reduced exports containing only current working values by default.
+
+## BigBiax calibrations
+
+Use the [BigBiax calibration guide](docs/BIGBIAX_CALIBRATIONS.md) to create your
+private JSON catalog, enter and inspect revisions, and apply nonlinear frame
+corrections while keeping displacement in µm. Start with `python -m xlookpy catalog init`.
