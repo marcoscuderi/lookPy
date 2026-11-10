@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+message: "If you use lookPy in your research, please cite the software and specify the version you used."
+title: "lookPy"
+type: software
+authors:
+  - given-names: Marco
+    family-names: Scuderi
+version: "0.4.0"
+repository-code: "https://github.com/marcoscuderi/lookPy"
+license: Apache-2.0

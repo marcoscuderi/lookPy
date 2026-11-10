@@ -39,11 +39,10 @@ setting; this document establishes policy and does not itself enforce it.
 application version, for example `v0.1.1a1`. Released tags are never moved or
 reused. The first tag/release is created only after baseline CI passes.
 
-Record user-facing changes in CHANGELOG.md. A change accepted after an old tag
-gets a new version; a rollback does not rewrite published history. Keep release
-notes concise and state scientific limitations. The project currently has no
-selected redistribution license; the owner must choose one before making
-licensing promises to contributors or packaging/distribution services.
+Record user-facing changes in CHANGELOG.md. Keep the software version in
+CITATION.cff aligned with the package version. Keep release notes concise and
+state scientific limitations. The software and documentation use the
+[Apache License 2.0](LICENSE). Keep third-party notices with material you add.
 
 ## Development installation
 

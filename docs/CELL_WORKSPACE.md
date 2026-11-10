@@ -1,7 +1,7 @@
 # Cell scripts and the interactive workspace
 
-Read the [real-experiment Mac procedure](testing/CELL_WORKSPACE_MAC.md) first.
-The new workspace accepts ordinary top-level Python split by `# %%` comments.
+Open the [BigBiax template](../examples/bigbiax/reduction_step_by_step.py) for a
+worked sequence. The workspace accepts top-level Python split by `# %%` comments.
 `load`, `calibration`, `save`, `stop` and `session` are injected by the GUI/CLI
 runner; imports of those four helpers from xlookpy also work within that runner.
 These scripts require the workspace or `python -m xlookpy run script.py`, not

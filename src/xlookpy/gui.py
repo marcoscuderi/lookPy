@@ -358,7 +358,7 @@ class WorkspaceDock(QtWidgets.QDockWidget):
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self, script=None, registry=None):
         super().__init__()
-        self.setWindowTitle(f"Xlook Python — {__version__} test implementation")
+        self.setWindowTitle(f"lookPy — {__version__}")
         self.resize(1600, 950)
         self.registry = Registry(registry)
         self.script = None

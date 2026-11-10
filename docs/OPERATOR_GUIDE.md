@@ -1,31 +1,13 @@
-# Xlook Python — first test implementation
+# lookPy operator guide
 
-Version **0.1.1a1**, with contact-onset zeroing and the Monokai editor. A script-driven desktop workspace for experimental reduction.
-The numerical package also runs without the desktop. This is an early working
-foundation, not a complete translation of Xlook and not a validated final
-reduction of your laboratory experiment.
+lookPy provides a Python script editor, a cell workspace with IPython, and
+interactive dual-axis plots for laboratory experiment reduction. The same
+reduction scripts can also run from the terminal.
 
-Start with the synthetic example, then use the TDMS template with your own
-operator choices. All example calibration values are labelled **synthetic**.
-
-## Start on your Mac
-
-Using Anaconda, unzip this package, open Terminal, and change into the
-`xlook_python` folder. For a first installation run:
-
-```bash
-conda create -n xlook python=3.12 pip
-conda activate xlook
-python -m pip install -e ".[gui]"
-python tools/setup_demo.py
-python -m xlookpy gui examples/demo/reduction.py
-```
-
-The first installation needs internet access. If the xlook environment already
-exists, skip its creation. On subsequent occasions run `conda activate xlook`,
-change to the installed source folder, and run the final command. Closing a plot
-tab does not change the reduction script. For an existing editable installation,
-see `EDITOR_UPDATE.md` for updating only the two editor-related files.
+Follow the [installation instructions](../README.md#install-with-anaconda).
+Start with the [synthetic teaching example](../README.md#try-the-synthetic-teaching-example)
+to learn the plot controls, then open a copy of the BigBiax template in your
+experiment directory.
 
 ## Readable script editor
 
@@ -65,49 +47,22 @@ The right panel is an ordinary Python script editor; plot selections only change
 the script when you paste them. Save before switching projects or closing the
 application in this initial release.
 
-## Try your actual experiment
+## Reduce a BigBiax experiment
 
-Copy `examples/your_experiment/reduction.py` into a **new directory** containing
-`eq_phys_demo.tdms`, or set its `RAW_FILE` to the full file path. Keep your
-existing reduction project intact.
+1. Copy the [step-by-step template](../examples/bigbiax/reduction_step_by_step.py)
+   into your experiment directory. Set `RAW_FILE` and select the reviewed
+   [BigBiax catalog](BIGBIAX_CALIBRATIONS.md).
+2. Run through cell 4a. Plot the original ADC load channels against `record_id`,
+   then enter the unloaded intervals, ram contacts and analysis end in cell 4b.
+3. Run the remaining cells in order and inspect the calibrated signals, stresses,
+   and load-point and corrected displacements. Review the geometry, frame model
+   and its applicable interval for each experiment.
+4. Use **Run all** to publish your checked reduction. See
+   [cell execution and IPython](CELL_WORKSPACE.md) for exploratory work.
 
-```bash
-python -m xlookpy gui /full/path/to/your/new_project/reduction.py
-```
-
-The template starts in inspection mode while either contact setting is `None`.
-Run it to see original physical forces and displacements, click each ram's
-sample-contact onset, and paste the copied original record ID into:
-
-```python
-VERTICAL_CONTACT_RECORD = 1200    # Example only: replace with your picked ID.
-HORIZONTAL_CONTACT_RECORD = 850  # Example only: replace with your picked ID.
-```
-
-Run all again to reduce. Each selected contact sample is exactly zero, earlier
-force/displacement samples are forced to zero, and later samples retain their
-changes relative to contact. Each ram's displacement shares that ram's contact.
-These are single record IDs, not times, values or averaging intervals.
-
-The reduction uses the acquisition coefficients stored in the TDMS, 2500 mm²
-area, and two shear surfaces. **Apparatus correction is disabled** until selected.
-Contact choices and subtracted values are retained in the experiment manifest.
-Friction without sufficient normal load is NaN; velocity is estimated only from
-complete windows after vertical contact, so it cannot leak across the imposed
-pre-contact zero segment.
-
-The file's custom Slope/Intercept properties do not declare physical output
-units. The template explicitly supplies the kN/µm/s conventions used in your
-previous workflow. The interface retains those properties in the original
-channel metadata. Original TDMS channel units are labelled `unassigned` until
-declared; they are not assumed to be physical dimensionless measurements.
-Do not apply demo calibrations to this file.
-
-The original standard-reduction template was exercised on your full
-728,939-record file. The contact-zero revision was tested with generated TDMS
-signals of known contact and deformation, including an elastic correction.
-The raw laboratory file is not duplicated in this download. Selecting the actual
-physical contact records remains the operator's decision. See CONTACT_ZERO_UPDATE.md.
+For the earlier acquisition-profile workflow, use the
+[legacy batch example](../examples/your_experiment/reduction.py) and see the
+[contact-zero notes](../CONTACT_ZERO_UPDATE.md).
 
 ## Central application and per-experiment files
 
@@ -143,6 +98,31 @@ No separate calibration files are required in the experiment directory. The
 manifest embeds the exact calibration definitions used. Previous result folders
 are retained; automatic cleanup is not implemented.
 
+## Reopen saved results
+
+Open the original reduction script in lookPy to load its last published result.
+Use **New plot tab** to inspect the saved channels.
+
+To start a separate analysis, place `analysis.py` beside `experiment.json`
+and run this cell in lookPy:
+
+```python
+# %% Open the exported data
+import json
+from xlookpy import load
+
+manifest = json.loads(
+    (session.project / "experiment.json").read_text(encoding="utf-8")
+)
+exp = load(manifest["outputs"]["dat"], reader="text")
+```
+
+The loader restores the exported channels, units and original record IDs.
+For a fixed run, pass its `results/<run-id>/reduced.dat` path directly to
+`load()`. Use **Run cell** for exploration in the same directory. A successful
+**Run all** from a separate analysis script publishes a new result there and
+updates `experiment.json`.
+
 ## Documentation and limitations
 
 - [Calibration guide](CALIBRATIONS.md): models, coefficient units, revisions,
@@ -153,15 +133,11 @@ are retained; automatic cleanup is not implemented.
   and the next implementation steps.
 - [Validation](../VALIDATION.md): checks performed and remaining limitations.
 
-The accepted numerical workflow supports Run all, original-record selections,
-CSV/BRAVA text/legacy binary and the apparatus ADC-group TDMS reader. See the
-[function reference](RAWPY_FUNCTIONS.md) for current operations. The workspace
-trial adds [top-level cells and IPython](CELL_WORKSPACE.md); use the
-[real-experiment Mac procedure](testing/CELL_WORKSPACE_MAC.md). Existing
-`def reduce(session)` files continue to run in batch mode; convert a new working
-copy to use cells and the console. Rate-and-state modelling, inversion,
-stick-slip catalogues, automatic calibration fitting and publication figure
-export remain deferred. There is no full Xlook command-recipe compatibility claim.
+The readers support CSV, rawPy-style text, supported legacy binary files, and
+aligned ADC-group TDMS data. Existing `def reduce(session)` scripts continue
+to run in batch mode. **Convert to cell script** creates a working copy for
+cell execution. Rate-and-state modelling, inversion, stick-slip catalogues
+and automatic calibration fitting remain outside this release.
 
 Scripts are ordinary trusted Python with access to your computer. Transactional
 publication applies to package-managed outputs, not arbitrary file writes made

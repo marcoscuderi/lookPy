@@ -1,24 +1,24 @@
 # Reduction API and execution rules
 
-A reduction script defines `def reduce(session):`. Put experiment processing
-inside that function. The application reads and executes that exact source from
-fresh state on every Run all. Standard Python variables, branches and functions
-are available. Paths passed to `session.load` resolve beside the script, not
-against whichever directory launched the application.
+Write a reduction as top-level Python cells separated by `# %%` markers.
+The managed workspace supplies `session`, `load`, `calibration`, `save` and
+`stop`. Existing `def reduce(session)` scripts still work in batch mode.
+**Run all** executes the saved source from fresh state. Relative input paths
+resolve from the folder containing the script.
 
 ## Session methods
 
 | Call | Meaning |
 |---|---|
-| `session.load(path, units={...})` | Read one aligned CSV/ADC TDMS experiment |
+| `session.load(path, units={...}, reader=...)` | Read one aligned CSV, ADC TDMS, two-header text, or supported legacy binary experiment |
 | `session.calibration(id)` | Get an exact central revision, or saved snapshot in replay |
 | `session.config = {...}` | Record JSON-compatible experiment-specific decisions |
 | `session.export(exp, channels=[...])` | Choose final experiment/channels; publish after successful execution |
 
 The central registry can be selected through a command argument, environment
 variable, or the GUI folder selector. Calibration examples never become lab
-defaults. Reader support is intentionally explicit: other TDMS group layouts,
-asynchronous channels and Xlook binary inputs require additional adapters.
+defaults. The TDMS reader expects aligned ADC channels. Select `reader="text"`
+for `reduced.dat` and `reader="xlook_binary"` for supported legacy binary files.
 
 ## Channel and selection methods
 
@@ -127,9 +127,11 @@ uncorrected displacement include apparatus deformation.
 
 ## Execution and saving
 
-The GUI launches the same command-line runner in a separate Python process.
-Results return as ordinary manifest and data files. No Qt object enters the
-numerical engine. Editing a script marks displayed results as outdated.
+The cell editor and console share an isolated IPython process. **Run cell**
+advances through the script and **Run to here** rebuilds the script through
+the selected cell. **Run all** starts fresh and publishes the result. Legacy
+`def reduce(session)` scripts run through a separate batch worker. See
+[cell execution and IPython](CELL_WORKSPACE.md) for the execution states.
 
 On success, the runner writes data/cache/manifest into a fresh run directory,
 then atomically replaces `experiment.json`. On ordinary script/validation/export
@@ -139,9 +141,6 @@ Cancellation or power loss may leave an unused staging/run directory; the
 manifest references only a completed published run. Results are checked against
 their state-cache fingerprint when opened in the desktop.
 
-In this release `# %%` markers organize the script for readers only: **Run
-section is not implemented**. A general dependency graph, checkpoint reuse,
-undo, multi-experiment sessions, and automatic script insertion are deferred.
 
 ## Manual plot controls
 
