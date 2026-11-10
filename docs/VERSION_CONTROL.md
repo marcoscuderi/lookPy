@@ -10,13 +10,14 @@ mkdir -p "$HOME/Code"
 cd "$HOME/Code"
 git clone https://github.com/marcoscuderi/lookPy.git
 cd lookPy
+conda env create -f environment.yml
 conda activate xlook
 python -m pip install -e ".[gui]"
 python -m xlookpy gui
 ```
 
-If the environment does not exist yet, run `conda env create -f environment.yml`
-before activating it. In the GUI, open your existing experiment's reduction.py.
+Skip environment creation if `xlook` already exists. In the GUI, open your
+experiment's reduction script.
 The installed package is still named xlookpy, so no script imports need changing.
 
 ## Get an approved update
@@ -58,7 +59,7 @@ Accept or reject the change in its pull request; scientific choices remain yours
 
 ## Return to the baseline
 
-After the baseline release is published, its tag is v0.1.1a1:
+To return to the historical baseline, check out `v0.1.1a1`.
 
 ```bash
 git fetch origin --tags
@@ -69,19 +70,17 @@ python -m xlookpy gui
 
 Detached mode runs an exact historical release. For developing from that point,
 create a branch instead: `git switch -c recovery/my-change v0.1.1a1`.
-Use `git switch main` to return. The tag is created only after initial tests pass;
-if it is not available yet, check GitHub Actions rather than guessing a tag.
+Use `git switch main` to return to the current code.
 
 ## What lives where
 
 | Material | Location |
 |---|---|
 | Application, tests, synthetic examples, documentation | This repository |
-| Real calibration revisions | Central registry, outside this checkout |
+| Reviewed BigBiax catalog | `calibrations/BigBiax.json` |
+| Private calibration additions | Central registry outside this checkout |
 | Raw measurements and operator reduction scripts | Experiment directories |
 | Per-run snapshots and calibration definitions actually used | Experiment manifests/results |
 
-This public repository contains no real TDMS inputs or measured calibration
-values. GitHub is not a replacement for raw-data backup. Git commit/dirty-state
-recording in experiment manifests is tracked as a follow-up; the baseline
-currently records application version, full script, calibrations and input hashes.
+Keep laboratory TDMS inputs in your experiment storage. The manifest records
+the application version, full script, calibration snapshots and input hashes.

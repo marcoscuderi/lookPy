@@ -2,11 +2,9 @@
 
 Script-driven experimental reduction, inspired by Xlook's interactive workflow.
 
-**Trial branch: 0.1.3a1 — manual plot tabs and original-row axes.**
-The approved main/tag baseline remains 0.1.1a1 until this change is accepted.
-The embedded Monokai editor and contact-onset zeroing are retained.
-The repository is named lookPy; the Python package and launch command remain
-`xlookpy`, so existing reduction scripts continue to work.
+lookPy combines a Python reduction script, an interactive IPython workspace,
+and dual-axis plots for laboratory data. The package and launch command are
+`xlookpy`. See the [changelog](CHANGELOG.md) and [tagged releases](https://github.com/marcoscuderi/lookPy/releases).
 
 ## Install with Anaconda
 
@@ -16,13 +14,14 @@ experiments and operator reduction scripts in their own experiment directories.
 ```bash
 git clone https://github.com/marcoscuderi/lookPy.git
 cd lookPy
+conda env create -f environment.yml
 conda activate xlook
 python -m pip install -e ".[gui]"
 python -m xlookpy gui
 ```
 
-If you do not yet have the environment, run `conda env create -f environment.yml`
-before activating it. The editable installation uses this checkout directly.
+If the `xlook` environment already exists, skip its creation. The editable
+installation uses this checkout directly.
 In the GUI, open your existing experiment's reduction script.
 
 ## Try the synthetic teaching example
@@ -81,6 +80,13 @@ and retains measured changes afterwards. Calibrations, contact choices, units,
 script source and raw-data fingerprints are stored in the experiment manifest.
 Apparatus correction remains an explicit operator choice.
 
+## Reopen reduced data
+
+Open the same reduction script to load its last published result. The manifest
+points to the exported table at `results/<run-id>/reduced.dat`. See
+[reopening saved results](docs/OPERATOR_GUIDE.md#reopen-saved-results) for
+loading that table from a separate analysis script.
+
 ## Updates and rollback
 
 Close the app, then from this checkout:
@@ -95,8 +101,7 @@ python -m xlookpy gui
 Preserve any local edits before switching/updating. Reinstall with
 `python -m pip install -e ".[gui]"` when dependency/package metadata changes.
 See [the Git workflow guide](docs/VERSION_CONTROL.md) for testing branches and
-returning to an exact release. The baseline tag v0.1.1a1 is created after the
-first successful Linux/macOS CI run; published tags are never moved.
+returning to an exact release. The initial baseline is available as `v0.1.1a1`.
 
 ## Development policy
 
@@ -118,49 +123,17 @@ python -m pip install -e ".[gui,test]"
 python -m pytest -q
 ```
 
-GitHub Actions runs the 26-test feature suite on Linux and macOS with Qt
-offscreen. Offscreen tests do not certify native desktop behaviour or approve
-scientific reference/calibration choices. The application remains an early
-working foundation, not a complete Xlook port.
+GitHub Actions runs the test suite on Linux and macOS with Qt offscreen.
 
 ## Documentation
 
-- [Exact Mac branch-testing and rollback procedure](docs/testing/MANUAL_PLOT_TABS_MAC.md)
-
 - [Operator guide](docs/OPERATOR_GUIDE.md)
-- [Contact-zero workflow](CONTACT_ZERO_UPDATE.md)
+- [Cell execution and IPython](docs/CELL_WORKSPACE.md)
+- [BigBiax calibration and frame correction](docs/BIGBIAX_CALIBRATIONS.md)
 - [Calibration definitions and history](docs/CALIBRATIONS.md)
 - [Reduction API and execution rules](docs/API.md)
+- [rawPy operations and worked example](docs/RAWPY_FUNCTIONS.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Git workflow: install, update, test and roll back](docs/VERSION_CONTROL.md)
-- [Baseline provenance](docs/BASELINE.md)
 - [Validation and limitations](VALIDATION.md)
-
-Rate-and-state forward/inverse modelling, advanced catalogues and additional
-Xlook compatibility remain future work. Cell execution and IPython are available
-on the workspace test branch described below.
-
-## rawPy-style mock analysis (0.2.0a1 test branch)
-
-Start with the [Mac test procedure](docs/testing/RAWPY_ANALYSIS_MAC.md),
-[complete function reference](docs/RAWPY_FUNCTIONS.md), and
-[worked reduction](examples/rawpy_mock/reduction.py).
-All mock constants are synthetic; no real experiment data are included.
-
-## Interactive cell workspace (0.3.0a1 test branch)
-
-Use your real experiment with [cell execution and IPython](docs/CELL_WORKSPACE.md).
-The [Mac procedure](docs/testing/CELL_WORKSPACE_MAC.md) covers updating, converting
-a working copy of your current script, testing and returning to main.
-
-## Highlighting and compact channels (0.3.1a1)
-
-The [Mac update guide](docs/testing/CHANNEL_UPDATES_MAC.md) describes stable editor
-colouring, in-place working-channel updates, preserved revision history and
-reduced exports containing only current working values by default.
-
-## BigBiax calibrations
-
-Use the [BigBiax calibration guide](docs/BIGBIAX_CALIBRATIONS.md) to create your
-private JSON catalog, enter and inspect revisions, and apply nonlinear frame
-corrections while keeping displacement in µm. Start with `python -m xlookpy catalog init`.
+- [Historical baseline](docs/BASELINE.md) and [branch test procedures](docs/testing/)
