@@ -1,6 +1,9 @@
 # Changelog
 
-## Unreleased
+## 0.4.0 — first working source release
+
+- Release the software and documentation under Apache 2.0 and provide
+  versioned software citation metadata.
 
 - Subtract a linear or polynomial trend over a selected record interval and
   save the residual as a separate channel. Copy the script command from the

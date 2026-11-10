@@ -112,9 +112,17 @@ returning to an exact release. The initial baseline is available as `v0.1.1a1`.
   the operator-approved BigBiax catalog is versioned explicitly.
 - Changes and releases are recorded in [CHANGELOG.md](CHANGELOG.md).
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). Branch protection is a repository-owner
-setting, separate from this documented policy. The project license is not yet
-selected.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development and release procedures.
+
+## License and citation
+
+The lookPy software and its documentation are available under the
+[Apache License 2.0](LICENSE). Third-party dependencies retain their own
+licenses. The measured BigBiax calibration catalog is outside the scope of
+the software license.
+
+If you use lookPy in your research, cite the software and include the version
+you used. Citation details are in [CITATION.cff](CITATION.cff).
 
 ## Tests
 

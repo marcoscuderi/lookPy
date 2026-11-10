@@ -1,4 +1,4 @@
-# lookPy first working release
+# lookPy v0.4.0
 
 Draft release notes for a GitHub source release. The historical baseline
 is tagged `v0.1.1a1`.
@@ -20,6 +20,11 @@ Install from the source checkout using the [quick start](../../README.md#install
 The [operator guide](../OPERATOR_GUIDE.md) covers inspection, reduction, and
 reopening saved results. The [BigBiax calibration guide](../BIGBIAX_CALIBRATIONS.md)
 covers model selection and calibration provenance.
+
+## License and citation
+
+The software and documentation use the [Apache License 2.0](../../LICENSE).
+Use [CITATION.cff](../../CITATION.cff) to cite lookPy v0.4.0 in research.
 
 ## Scope
 
