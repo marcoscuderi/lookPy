@@ -79,6 +79,27 @@ NaN; even missing pre-contact values become zero under the requested forced-zero
 rule. Each operation records the contact ID, exact offset and count of forced
 samples in the manifest. Read-only original values remain available for review.
 
+## Detrend an interval
+
+```python
+trend_fit = exp.detrend(
+    "time", "friction", records=exp.records(12000, 16000),
+    degree=1, output="friction_detrended",
+)
+```
+
+Choose degree 1 for a line or degree 2 or higher for a polynomial. The fit uses
+finite X/Y pairs between the two original record IDs, inclusive. The new channel
+contains `y - fitted_trend(x)` in the units of Y. Values outside the interval or
+without a finite pair are NaN. The source channels are preserved. The returned
+diagnostics and the operation history include the fit coefficients, degree,
+and fit quality. To process several windows, give each residual its own output
+name. Use the same source revisions as in the GUI when reproducing a fit.
+
+The fit includes variations within the window. Prefer a low degree when the
+trend is smooth, since a flexible polynomial can absorb part of the variation
+you want to measure.
+
 ## What derivative() calculates
 
 For each time t, gather finite samples between t − window_s/2 and

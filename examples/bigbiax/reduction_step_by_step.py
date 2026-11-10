@@ -393,6 +393,19 @@ del friction_before_filter
 # See docs/RAWPY_FUNCTIONS.md in lookPy for the operation reference.
 
 
+# %% 12c. Optional detrending
+# Paste commands from Fit interval → Copy detrend command here, or add entries
+# below as (x channel, y channel, (first record, last record), degree, output).
+# This cell uses the channels available at this stage, including any filtering.
+# Use a distinct output name for each window.
+DETREND_WINDOWS = [
+    # ("time", "friction", (12000, 16000), 1, "friction_detrended_1"),
+]
+for x_channel, y_channel, interval, degree, output in DETREND_WINDOWS:
+    exp.detrend(x_channel, y_channel, records=exp.records(*interval),
+                degree=degree, output=output)
+
+
 # %% 13. Select final output channels
 # None selects the current working channels. To export a subset, list their names.
 # Original ADC signals remain available in lookPy. Run all publishes the results

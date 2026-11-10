@@ -45,6 +45,12 @@ fit quality and coefficients, including the slope and its units for degree 1.
 Each new fit replaces the previous overlay in that tab. **Clear fit** removes
 it. Use the reduction script's `exp.fit()` for fits you want to save and replay.
 
+To remove a trend, fit the interval and click **Copy detrend command**. Paste
+the command into your reduction script after the operations that produced the
+plotted channels, then run that cell. The new channel contains the measured
+values minus the fitted trend, in the original Y units. Plot it against the
+same X channel or `record_id`. Use a separate output name for each window.
+
 The embedded editor still supports Python colouring, font-size controls and
 dark/light themes. Click curves to copy original row IDs and two-point intervals.
 

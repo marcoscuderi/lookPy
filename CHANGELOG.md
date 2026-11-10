@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Subtract a linear or polynomial trend over a selected record interval and
+  save the residual as a separate channel. Copy the script command from the
+  plot's interval fit.
 - Add a step-by-step BigBiax reduction example with separate inspection,
   calibration, stress, frame correction, and analysis cells.
 - Show or hide workspace panels from **View → Panels**. Detached panels on
