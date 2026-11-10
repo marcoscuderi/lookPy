@@ -33,6 +33,7 @@ class PlotPanel(QtWidgets.QWidget):
         self.fit_start = None
         self.fit_marker = None
         self.fit_overlay = None
+        self.detrend_command = None
         self._updating = False
         layout = QtWidgets.QVBoxLayout(self)
         controls = QtWidgets.QHBoxLayout()
@@ -61,6 +62,11 @@ class PlotPanel(QtWidgets.QWidget):
         self.clear_fit_button.clicked.connect(self.clear_fit)
         self.clear_fit_button.setEnabled(False)
         fit_controls.addWidget(self.clear_fit_button)
+        self.copy_detrend_button = QtWidgets.QPushButton("Copy detrend command")
+        self.copy_detrend_button.setToolTip("Copy a reduction command using the displayed fit's curve, degree and record interval.")
+        self.copy_detrend_button.clicked.connect(self.copy_detrend)
+        self.copy_detrend_button.setEnabled(False)
+        fit_controls.addWidget(self.copy_detrend_button)
         fit_controls.addStretch()
         layout.addLayout(fit_controls)
         self.plot = pg.PlotWidget()
@@ -238,6 +244,14 @@ class PlotPanel(QtWidgets.QWidget):
             self.fit_overlay = None
             self.status.setText("Fit cleared. Click near a curve to pick its original record.")
         self.clear_fit_button.setEnabled(False)
+        self.detrend_command = None
+        self.copy_detrend_button.setEnabled(False)
+
+    def copy_detrend(self):
+        if self.detrend_command is not None:
+            QtWidgets.QApplication.clipboard().setText(self.detrend_command)
+            self.status.setText("Copied detrend command. Paste it into the reduction script or IPython workspace.")
+            self.picked.emit(f"Copied detrend command:\n{self.detrend_command}")
 
     def pick_fit_endpoint(self, position):
         channel = self.fit_start[1] if self.fit_start is not None else None
@@ -283,6 +297,11 @@ class PlotPanel(QtWidgets.QWidget):
         axis.addItem(item, ignoreBounds=True)
         self.fit_overlay = (axis, item)
         self.clear_fit_button.setEnabled(True)
+        self.detrend_command = (
+            f"exp.detrend({xname!r}, {channel!r}, records=exp.records({first}, {last}), "
+            f"degree={degree}, output={channel + '_detrended'!r})"
+        )
+        self.copy_detrend_button.setEnabled(True)
         title = f"Degree {degree} fit · {channel} vs {xname} · records {first}–{last}"
         coefficients = result["coefficients"]
         r_squared = result["r_squared"]

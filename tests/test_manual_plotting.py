@@ -204,6 +204,14 @@ def test_interactive_fit_uses_original_record_interval_and_selected_axis(app):
     assert panel.last_picks == []
 
     panel.fit_degree.setCurrentIndex(panel.fit_degree.findData(1))
+    panel.copy_detrend_button.click()
+    command = app.clipboard().text()
+    assert command == ("exp.detrend('time', 'slip', records=exp.records(21, 25), "
+                       "degree=2, output='slip_detrended')")
+    trial = Experiment({name: exp[name] for name in exp.channels}, record_ids=exp.record_ids)
+    exec(command, {"exp": trial})
+    np.testing.assert_allclose(trial["slip_detrended"].values,
+                               [np.nan, 0, 0, np.nan, 0, 0, np.nan], atol=1e-10)
     panel.fit_button.click()
     click(panel.primary.vb, exp["force"].values, 1)
     click(panel.primary.vb, exp["force"].values, 4)
@@ -221,6 +229,7 @@ def test_interactive_fit_uses_original_record_interval_and_selected_axis(app):
     assert panel.fit_overlay is None
     assert panel.fit_start is None
     assert not panel.clear_fit_button.isEnabled()
+    assert not panel.copy_detrend_button.isEnabled()
 
     zero = np.zeros_like(x)
     flat = Experiment({"time": exp["time"], "force": Channel(zero, "kN", {})})

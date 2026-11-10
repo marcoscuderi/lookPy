@@ -88,6 +88,36 @@ def test_fit_constant_output_and_degenerate_input():
         e.fit("repeated", "y", records=e.records(0, 3), output="bad")
 
 
+@pytest.mark.parametrize("degree", [1, 2])
+def test_detrend_matches_fit_and_preserves_local_variation(degree):
+    x = np.linspace(-1, 1, 101)
+    trend = 10 - 2*x
+    if degree == 2:
+        trend += 0.3*x**2
+    y = trend + np.exp(-(x/0.04)**2)
+    x[30], y[70] = np.nan, np.nan
+    e = exp(x=(x, "s"), y=(y, "MPa")).slice(Records(5, 95))
+    interval = e.records(10, 90)
+    fit = e.fit("x", "y", records=interval, degree=degree, output="trend")
+    result = e.detrend("x", "y", records=interval, degree=degree, output="residual")
+    assert result == fit
+    residual = e["residual"]
+    assert residual.unit == "MPa"
+    np.testing.assert_allclose(residual.values, e["y"].values - e["trend"].values)
+    assert residual.values[45] > 0.85
+    assert np.abs(residual.values[10]) < 0.1
+    np.testing.assert_array_equal(e["y"].values, y[5:96])
+    assert e.history[-1]["records"] == interval.json()
+    assert e.history[-1]["input_revisions"] == {"x": 0, "y": 0}
+    json.dumps(e.history, allow_nan=False)
+
+    with pytest.raises(ValueError, match="different from both"):
+        e.detrend("x", "y", records=interval, output="y")
+    with pytest.raises(ValueError, match="distinct"):
+        e.detrend("x", "y", records=e.records(10, 10), output="bad")
+    assert "bad" not in e.channels
+
+
 def test_running_slope_matches_direct_local_fits_on_long_irregular_coordinates():
     rng = np.random.default_rng(8)
     x = 20000+np.cumsum(rng.uniform(.0008, .0012, 10000))

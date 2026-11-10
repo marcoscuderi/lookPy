@@ -180,21 +180,43 @@ class AnalysisOperations:
                          "reference_record": int(self.record_ids[i]), "model": model,
                          "note": "Exact legacy rawPy recurrence, including previous-sample thickness; validate scientific applicability separately."})
 
-    def fit(self, x, y, *, records, output, degree=1):
-        """Stable polynomial fit on an interval; return diagnostics, add fitted channel.
-
-        Ascending coefficients use the original x coordinate. Evaluation uses a
-        centered/scaled Polynomial for stability. Output outside selection is NaN.
-        """
+    def _fit_interval(self, x, y, records, degree):
         degree = _integer(degree, "degree", 0)
         xx, yy = self[x].values, self[y].values
         active = self._selection(records)
         good = active & np.isfinite(xx) & np.isfinite(yy)
         poly, result = fit_polynomial(
             xx[good], yy[good], degree, x_unit=self[x].unit, y_unit=self[y].unit)
+        return poly, result, active, good
+
+    def fit(self, x, y, *, records, output, degree=1):
+        """Stable polynomial fit on an interval; return diagnostics, add fitted channel.
+
+        Ascending coefficients use the original x coordinate. Evaluation uses a
+        centered/scaled Polynomial for stability. Output outside selection is NaN.
+        """
+        poly, result, active, _ = self._fit_interval(x, y, records, degree)
+        xx = self[x].values
         fitted = np.full(len(self), np.nan)
         fitted[active & np.isfinite(xx)] = poly(xx[active & np.isfinite(xx)])
         self._put(output, fitted, self[y].unit, {"operation": "fit", "input": y, "x": x,
+                  "records": records.json(), "fit": result})
+        return result
+
+    def detrend(self, x, y, *, records, output, degree=1):
+        """Fit and subtract a polynomial on an inclusive interval.
+
+        Store y - trend in a separate channel with the units of y. Missing
+        pairs and rows outside the interval are NaN. Return the fit diagnostics.
+        """
+        if records is None:
+            raise ValueError("Detrending needs an explicit interval: exp.records(start, end).")
+        if output in (x, y):
+            raise ValueError("Choose an output name different from both input channels.")
+        poly, result, _, good = self._fit_interval(x, y, records, degree)
+        residual = np.full(len(self), np.nan)
+        residual[good] = self[y].values[good] - poly(self[x].values[good])
+        self._put(output, residual, self[y].unit, {"operation": "detrend", "input": y, "x": x,
                   "records": records.json(), "fit": result})
         return result
 
